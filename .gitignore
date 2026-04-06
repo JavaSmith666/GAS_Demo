@@ -1,0 +1,56 @@
+# -----------------------------------------------------------------------------
+# Unreal Engine — generated / local caches (do not version)
+# -----------------------------------------------------------------------------
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Build/
+Builds/
+.vs/
+*.VC.db
+*.VC.opendb
+*.opensdf
+*.sdf
+*.sln.docstates
+*.suo
+*.user
+*.userosscache
+*.userprefs
+*.opendb
+
+# Auto-generated plugin binaries inside Plugins
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
+
+# Local plugin developer folders (optional; uncomment if you use them)
+# Plugins/**/Saved/
+
+# -----------------------------------------------------------------------------
+# JetBrains / Rider
+# -----------------------------------------------------------------------------
+.idea/
+*.iml
+
+# -----------------------------------------------------------------------------
+# OS
+# -----------------------------------------------------------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# -----------------------------------------------------------------------------
+# Misc
+# -----------------------------------------------------------------------------
+*.log
+*.tmp
+*.temp
+*.swp
+*~
+
+# If you regenerate the solution and prefer not to track it, uncomment:
+# *.sln

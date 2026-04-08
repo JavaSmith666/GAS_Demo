@@ -49,6 +49,14 @@ protected:
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* MouseLookAction;
 
+	/** Minimum allowed camera pitch (degrees). Use to clamp camera looking down. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
+	float MinCameraPitch = -80.f;
+
+	/** Maximum allowed camera pitch (degrees). Use to clamp camera looking up. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
+	float MaxCameraPitch = 80.f;
+
 public:
 
 	/** Constructor */

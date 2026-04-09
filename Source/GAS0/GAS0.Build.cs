@@ -7,6 +7,7 @@ public class GAS0 : ModuleRules
 	public GAS0(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+		OptimizeCode = CodeOptimization.Never;
 
 		PublicDependencyModuleNames.AddRange(new string[] {
 			"Core",

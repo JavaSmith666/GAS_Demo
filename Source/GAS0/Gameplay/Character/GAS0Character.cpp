@@ -11,6 +11,10 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "GAS0.h"
+#include "AbilitySystemComponent.h"
+#include "GameplayAbilitySpec.h"
+#include "Engine/StreamableManager.h"
+#include "Engine/AssetManager.h"
 
 AGAS0Character::AGAS0Character()
 {
@@ -45,6 +49,9 @@ AGAS0Character::AGAS0Character()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+
+	// Ability System Component
+	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 }
 
 // (constructor defaults set above)
@@ -64,6 +71,9 @@ void AGAS0Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AGAS0Character::Look);
+
+		// Fire (press left mouse to activate GrantedAbilities[0])
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &AGAS0Character::OnFireActionStarted);
 	}
 	else
 	{
@@ -87,6 +97,28 @@ void AGAS0Character::Look(const FInputActionValue& Value)
 
 	// route the input
 	DoLook(LookAxisVector.X, LookAxisVector.Y);
+}
+
+void AGAS0Character::OnFireActionStarted(const FInputActionValue& Value)
+{
+	if (!AbilitySystemComponent)
+	{
+		return;
+	}
+
+	if (GrantedAbilities.Num() <= 0)
+	{
+		return;
+	}
+
+	UClass* FireAbilityClass = GrantedAbilities[0].Get();
+	if (!FireAbilityClass)
+	{
+		UE_LOG(LogGAS0, Warning, TEXT("Fire ability not loaded yet. Ensure GrantedAbilities[0] is valid and loaded."));
+		return;
+	}
+
+	AbilitySystemComponent->TryActivateAbilityByClass(FireAbilityClass);
 }
 
 void AGAS0Character::DoMove(float Right, float Forward)
@@ -117,7 +149,7 @@ void AGAS0Character::DoLook(float Yaw, float Pitch)
 		const FRotator ControlRot = GetController()->GetControlRotation();
 		const float CurrentPitch = FRotator::NormalizeAxis(ControlRot.Pitch);
 		float DesiredPitch = CurrentPitch - Pitch;
-		if (DesiredPitch >= -40.f && DesiredPitch <= 40.f)
+		if (DesiredPitch >= MinCameraPitch && DesiredPitch <= MaxCameraPitch)
 		{
 			FRotator NewRot = GetController()->GetControlRotation();
 			NewRot.Pitch = ControlRot.Pitch - Pitch;
@@ -137,3 +169,51 @@ void AGAS0Character::DoJumpEnd()
 	// signal the character to stop jumping
 	StopJumping();
 }
+
+void AGAS0Character::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Initialize Ability System Component and grant default abilities
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+		// Collect soft paths to request async load
+		TArray<FSoftObjectPath> PathsToLoad;
+		PathsToLoad.Reserve(GrantedAbilities.Num());
+		for (const TSoftClassPtr<UGameplayAbility>& AbilityClassSoft : GrantedAbilities)
+		{
+			FSoftObjectPath Path = AbilityClassSoft.ToSoftObjectPath();
+			if (!Path.IsValid())
+			{
+				continue;
+			}
+			PathsToLoad.Add(Path);
+		}
+
+		if (PathsToLoad.Num() > 0)
+		{
+			// Request async load; OnGrantedAbilitiesLoaded will be called when ready
+			UAssetManager::GetStreamableManager().RequestAsyncLoad(PathsToLoad, FStreamableDelegate::CreateUObject(this, &AGAS0Character::OnGrantedAbilitiesLoaded));
+		}
+	}
+}
+
+void AGAS0Character::OnGrantedAbilitiesLoaded()
+{
+	if (!AbilitySystemComponent)
+	{
+		return;
+	}
+
+	for (const TSoftClassPtr<UGameplayAbility>& AbilityClassSoft : GrantedAbilities)
+	{
+		UClass* AbilityClass = AbilityClassSoft.Get();
+		if (AbilityClass)
+		{
+			FGameplayAbilitySpec Spec(AbilityClass, 1, INDEX_NONE, this);
+			AbilitySystemComponent->GiveAbility(Spec);
+		}
+	}
+}
+

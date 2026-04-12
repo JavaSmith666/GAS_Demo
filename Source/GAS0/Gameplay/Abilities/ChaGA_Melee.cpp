@@ -5,7 +5,7 @@
 
 bool UChaGA_Melee::PlayFireMontage()
 {
-    if (!FireMontage)
+    if (!RoleSkillConfig || !RoleSkillConfig->FireMontage)
     {
         return false;
     }
@@ -16,7 +16,7 @@ bool UChaGA_Melee::PlayFireMontage()
     const int32 SectionValue = RandomStream.RandRange(1, 2);
     const FName StartSection(*FString::FromInt(SectionValue));
 
-    ActiveMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, FireMontage, 1.0f, StartSection);
+    ActiveMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, RoleSkillConfig->FireMontage, 1.0f, StartSection);
     if (!ActiveMontageTask)
     {
         return false;

@@ -23,6 +23,7 @@ public class GAS0 : ModuleRules
 			"GameplayAbilities",
 			"GameplayTags",
 			"GameplayTasks",
+			"DeveloperSettings",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });

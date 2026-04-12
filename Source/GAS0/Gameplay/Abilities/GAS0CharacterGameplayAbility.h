@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
+#include "DataAssets/SkillConfig.h"
 #include "GAS0CharacterGameplayAbility.generated.h"
 
 class UAnimMontage;
@@ -20,6 +21,12 @@ class UGAS0CharacterGameplayAbility : public UGameplayAbility
 
 public:
     UGAS0CharacterGameplayAbility();
+
+    /** Called when the ability is given to an AbilitySystemComponent */
+    virtual void OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
+    
+    /** Public setter for skill configuration. */
+    void SetRoleSkillConfig(USkillConfig* InConfig) { RoleSkillConfig = InConfig; }
 
 protected:
 
@@ -39,10 +46,6 @@ protected:
     /** Plays fire montage and binds end callbacks. Override for custom play behavior. */
     virtual bool PlayFireMontage();
 
-    /** Montage played when this ability activates (for example, fire animation). */
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability|Animation")
-    TObjectPtr<UAnimMontage> FireMontage;
-
     UFUNCTION()
     void OnFireMontageCompleted();
 
@@ -58,8 +61,10 @@ protected:
 protected:
     UPROPERTY(Transient)
     TObjectPtr<UAbilityTask_PlayMontageAndWait> ActiveMontageTask;
+    
+    UPROPERTY(Transient)
+    USkillConfig* RoleSkillConfig = nullptr;
 
 private:
     void HandleFireMontageEnded(bool bWasCancelled);
 };
-

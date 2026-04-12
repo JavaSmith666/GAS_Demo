@@ -11,8 +11,20 @@ class USpringArmComponent;
 class UCameraComponent;
 class UInputAction;
 struct FInputActionValue;
-class UAbilitySystemComponent;
+class UGAS0AbilitySystemComponent;
 class UGameplayAbility;
+
+USTRUCT(BlueprintType)
+struct FPendingAbilityBinding
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TSubclassOf<UGameplayAbility> AbilityClass;
+
+	UPROPERTY()
+	UInputAction* ActivateAction;
+};
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
@@ -50,9 +62,6 @@ protected:
 	/** Mouse Look Input Action */
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* MouseLookAction;
-	
-	UPROPERTY(EditAnywhere, Category="Input")
-	UInputAction* FireAction;
 
 	/** Minimum allowed camera pitch (degrees). Use to clamp camera looking down. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
@@ -61,6 +70,9 @@ protected:
 	/** Maximum allowed camera pitch (degrees). Use to clamp camera looking up. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
 	float MaxCameraPitch = 40.f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 CharacterID = -1;
 
 public:
 
@@ -75,9 +87,6 @@ public:
 
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
-
-	/** Called when fire input starts */
-	void OnFireActionStarted(const FInputActionValue& Value);
 	
 	/** Initialize input action bindings */
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -98,6 +107,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
 
+	/** Generic handler for skill input actions */
+	void OnSkillActionStarted(TSubclassOf<UGameplayAbility> AbilityClass);
+
+	/** Attempts to bind any skills that were loaded but didn't have an InputComponent yet */
+	void TryBindPendingSkills();
+
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 
@@ -106,19 +121,16 @@ public:
 
 protected:
 
-	/** Callback when async loading of GrantedAbilities completes */
-	void OnGrantedAbilitiesLoaded();
+	/** Callback when async loading of DT entries completes */
+	void OnSkillConfigsLoaded(struct FSkillSlotEntry Slot0, struct FSkillSlotEntry Slot1, struct FSkillSlotEntry Slot2);
 
 	/** Ability System Component - used to grant and manage gameplay abilities */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities", meta = (AllowPrivateAccess = "true"))
-	UAbilitySystemComponent* AbilitySystemComponent;
+	UGAS0AbilitySystemComponent* AbilitySystemComponent;
 
-	/** Grant these ability classes (soft references) to the character on BeginPlay.
-	 *  Using soft class pointers avoids hard-loading ability classes at editor/pack time
-	 *  and lets the engine stream or load them on demand.
-	 */
-	UPROPERTY(EditDefaultsOnly, Category = "Abilities")
-	TArray<TSoftClassPtr<UGameplayAbility>> GrantedAbilities;
+private:
+	/** List of abilities and actions waiting for a valid InputComponent to be bound */
+	UPROPERTY()
+	TArray<FPendingAbilityBinding> PendingBindings;
 
 };
-

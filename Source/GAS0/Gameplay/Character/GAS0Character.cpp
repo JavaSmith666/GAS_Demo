@@ -11,10 +11,16 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "GAS0.h"
-#include "AbilitySystemComponent.h"
+#include "Gameplay/Abilities/GAS0AbilitySystemComponent.h"
 #include "GameplayAbilitySpec.h"
+#include "Gameplay/Abilities/GAS0CharacterGameplayAbility.h"
 #include "Engine/StreamableManager.h"
 #include "Engine/AssetManager.h"
+#include "Gameplay/Abilities/DataAssets/GAS0AbilitySettings.h"
+#include "Gameplay/Abilities/DataTables/CharacterSkillSlotsRow.h"
+#include "Gameplay/Abilities/DataAssets/SkillConfig.h"
+
+class UGAS0CharacterGameplayAbility;
 
 AGAS0Character::AGAS0Character()
 {
@@ -51,7 +57,7 @@ AGAS0Character::AGAS0Character()
 	FollowCamera->bUsePawnControlRotation = false;
 
 	// Ability System Component
-	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
+	AbilitySystemComponent = CreateDefaultSubobject<UGAS0AbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 }
 
 // (constructor defaults set above)
@@ -72,8 +78,8 @@ void AGAS0Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AGAS0Character::Look);
 
-		// Fire (press left mouse to activate GrantedAbilities[0])
-		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &AGAS0Character::OnFireActionStarted);
+		// Try to bind any skills that might have loaded before this was called
+		TryBindPendingSkills();
 	}
 	else
 	{
@@ -97,28 +103,6 @@ void AGAS0Character::Look(const FInputActionValue& Value)
 
 	// route the input
 	DoLook(LookAxisVector.X, LookAxisVector.Y);
-}
-
-void AGAS0Character::OnFireActionStarted(const FInputActionValue& Value)
-{
-	if (!AbilitySystemComponent)
-	{
-		return;
-	}
-
-	if (GrantedAbilities.Num() <= 0)
-	{
-		return;
-	}
-
-	UClass* FireAbilityClass = GrantedAbilities[0].Get();
-	if (!FireAbilityClass)
-	{
-		UE_LOG(LogGAS0, Warning, TEXT("Fire ability not loaded yet. Ensure GrantedAbilities[0] is valid and loaded."));
-		return;
-	}
-
-	AbilitySystemComponent->TryActivateAbilityByClass(FireAbilityClass);
 }
 
 void AGAS0Character::DoMove(float Right, float Forward)
@@ -174,46 +158,115 @@ void AGAS0Character::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Initialize Ability System Component and grant default abilities
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
-		// Collect soft paths to request async load
-		TArray<FSoftObjectPath> PathsToLoad;
-		PathsToLoad.Reserve(GrantedAbilities.Num());
-		for (const TSoftClassPtr<UGameplayAbility>& AbilityClassSoft : GrantedAbilities)
+
+		// Get DT from settings
+		const UGAS0AbilitySettings* Settings = GetDefault<UGAS0AbilitySettings>();
+		if (Settings && !Settings->CharacterSkillTable.IsNull())
 		{
-			FSoftObjectPath Path = AbilityClassSoft.ToSoftObjectPath();
-			if (!Path.IsValid())
+			UDataTable* SkillTable = Settings->CharacterSkillTable.LoadSynchronous();
+			if (SkillTable)
 			{
-				continue;
+				// Find row by CharacterID
+				FCharacterSkillSlotsRow* Row = SkillTable->FindRow<FCharacterSkillSlotsRow>(FName(*FString::FromInt(CharacterID)), TEXT("Skill Grant"));
+				if (Row)
+				{
+					TArray<FSoftObjectPath> PathsToLoad;
+					
+					auto ProcessSlot = [&](const FSkillSlotEntry& Entry) {
+						if (!Entry.AbilityClass.IsNull())
+						{
+							PathsToLoad.Add(Entry.AbilityClass.ToSoftObjectPath());
+						}
+						if (!Entry.SkillConfig.IsNull())
+						{
+							PathsToLoad.Add(Entry.SkillConfig.ToSoftObjectPath());
+						}
+						if (!Entry.ActivateAction.IsNull())
+						{
+							PathsToLoad.Add(Entry.ActivateAction.ToSoftObjectPath());
+						}
+					};
+
+					ProcessSlot(Row->Slot0);
+					ProcessSlot(Row->Slot1);
+					ProcessSlot(Row->Slot2);
+
+					if (PathsToLoad.Num() > 0)
+					{
+						UAssetManager::GetStreamableManager().RequestAsyncLoad(PathsToLoad, FStreamableDelegate::CreateUObject(this, &AGAS0Character::OnSkillConfigsLoaded, Row->Slot0, Row->Slot1, Row->Slot2));
+					}
+				}
 			}
-			PathsToLoad.Add(Path);
-		}
-
-		if (PathsToLoad.Num() > 0)
-		{
-			// Request async load; OnGrantedAbilitiesLoaded will be called when ready
-			UAssetManager::GetStreamableManager().RequestAsyncLoad(PathsToLoad, FStreamableDelegate::CreateUObject(this, &AGAS0Character::OnGrantedAbilitiesLoaded));
 		}
 	}
 }
 
-void AGAS0Character::OnGrantedAbilitiesLoaded()
+void AGAS0Character::OnSkillActionStarted(TSubclassOf<UGameplayAbility> AbilityClass)
 {
-	if (!AbilitySystemComponent)
+	if (AbilitySystemComponent && AbilityClass)
 	{
-		return;
-	}
-
-	for (const TSoftClassPtr<UGameplayAbility>& AbilityClassSoft : GrantedAbilities)
-	{
-		UClass* AbilityClass = AbilityClassSoft.Get();
-		if (AbilityClass)
-		{
-			FGameplayAbilitySpec Spec(AbilityClass, 1, INDEX_NONE, this);
-			AbilitySystemComponent->GiveAbility(Spec);
-		}
+		AbilitySystemComponent->TryActivateAbilityByClass(AbilityClass);
 	}
 }
 
+void AGAS0Character::OnSkillConfigsLoaded(FSkillSlotEntry Slot0, FSkillSlotEntry Slot1, FSkillSlotEntry Slot2)
+{
+	auto GrantAndBind = [&](const FSkillSlotEntry& Entry) {
+		UClass* AbilityClass = Entry.AbilityClass.Get();
+		if (AbilityClass && AbilitySystemComponent)
+		{
+			if (GetNetMode() < NM_Client)
+			{
+				FGameplayAbilitySpec Spec(AbilityClass, 1, INDEX_NONE, this);
+				
+				// Use SourceObject to carry the config to the ability instances
+				if (USkillConfig* Config = Entry.SkillConfig.Get())
+				{
+					Spec.SourceObject = Config;
+				}
+				
+				AbilitySystemComponent->GiveAbility(Spec);
+			}
+			
+			if (GetNetMode() != NM_DedicatedServer)
+			{
+				if (UInputAction* Action = Entry.ActivateAction.Get())
+				{
+					FPendingAbilityBinding Binding;
+					Binding.AbilityClass = AbilityClass;
+					Binding.ActivateAction = Action;
+					PendingBindings.Add(Binding);
+				}	
+			}
+		}
+	};
+
+	GrantAndBind(Slot0);
+	GrantAndBind(Slot1);
+	GrantAndBind(Slot2);
+
+	// Attempt binding immediately if InputComponent is already ready
+	TryBindPendingSkills();
+}
+
+void AGAS0Character::TryBindPendingSkills()
+{
+	if (InputComponent && IsLocallyControlled() && PendingBindings.Num() > 0)
+	{
+		if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent))
+		{
+			for (const FPendingAbilityBinding& Binding : PendingBindings)
+			{
+				if (Binding.ActivateAction && Binding.AbilityClass)
+				{
+					EIC->BindAction(Binding.ActivateAction, ETriggerEvent::Started, this, &AGAS0Character::OnSkillActionStarted, Binding.AbilityClass);
+				}
+			}
+			// Clear pending bindings after they are successfully bound to avoid duplicate bindings
+			PendingBindings.Empty();
+		}
+	}
+}

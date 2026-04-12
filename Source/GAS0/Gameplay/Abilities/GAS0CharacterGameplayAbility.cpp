@@ -10,6 +10,17 @@ UGAS0CharacterGameplayAbility::UGAS0CharacterGameplayAbility()
     InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 }
 
+void UGAS0CharacterGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+	Super::OnGiveAbility(ActorInfo, Spec);
+
+	// Try to get SkillConfig from SourceObject if not already set
+	if (USkillConfig* Config = Cast<USkillConfig>(Spec.SourceObject))
+	{
+		RoleSkillConfig = Config;
+	}
+}
+
 void UGAS0CharacterGameplayAbility::ActivateAbility(
     const FGameplayAbilitySpecHandle Handle,
     const FGameplayAbilityActorInfo* ActorInfo,
@@ -17,8 +28,17 @@ void UGAS0CharacterGameplayAbility::ActivateAbility(
     const FGameplayEventData* TriggerEventData)
 {
     Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+
+    // Fallback if RoleSkillConfig is still null (e.g. for non-instanced abilities or if logic missed it)
+    if (!RoleSkillConfig)
+    {
+	    if (FGameplayAbilitySpec* Spec = GetCurrentAbilitySpec())
+	    {
+		    RoleSkillConfig = Cast<USkillConfig>(Spec->SourceObject);
+	    }
+    }
     
-    if (!ActorInfo || !FireMontage)
+    if (!ActorInfo || !RoleSkillConfig)
     {
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;
@@ -39,7 +59,12 @@ void UGAS0CharacterGameplayAbility::ActivateAbility(
 
 bool UGAS0CharacterGameplayAbility::PlayFireMontage()
 {
-    ActiveMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, FireMontage);
+    if (RoleSkillConfig->FireMontage == nullptr)
+    {
+        return false;
+    }
+    
+    ActiveMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, RoleSkillConfig->FireMontage);
     if (!ActiveMontageTask)
     {
         return false;

@@ -21,28 +21,20 @@ void UBaseAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, MaxStrength, COND_None, REPNOTIFY_Always);
 }
 
-void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
-{
-	Super::PreAttributeChange(Attribute, NewValue);
-
-	// if (Attribute == GetMaxHpAttribute())
-	// {
-	// 	NewValue = FMath::Max(0.0f, NewValue);
-	// 	SetHp(FMath::Clamp(GetHp(), 0.0f, NewValue));
-	// }
-}
-
 void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);
 
-	// if (Data.EvaluatedData.Attribute == GetHpAttribute())
-	// {
-	// 	SetHp(FMath::Clamp(GetHp(), 0.0f, GetMaxHp()));
-	// }
-	// else if (Data.EvaluatedData.Attribute == GetMaxHpAttribute())
-	// {
-	// 	SetMaxHp(FMath::Max(0.0f, GetMaxHp()));
-	// 	SetHp(FMath::Clamp(GetHp(), 0.0f, GetMaxHp()));
-	// }
+	if (Data.EvaluatedData.Attribute == GetHpAttribute())
+	{
+		SetHp(FMath::Clamp(GetHp(), 0.0f, GetMaxHp()));
+	}
+	else if (Data.EvaluatedData.Attribute == GetMpAttribute())
+	{
+		SetMp(FMath::Clamp(GetMp(), 0.0f, GetMaxMp()));
+	}
+	else if (Data.EvaluatedData.Attribute == GetStrengthAttribute())
+	{
+		SetStrength(FMath::Clamp(GetStrength(), 0.0f, GetMaxStrength()));
+	}
 }

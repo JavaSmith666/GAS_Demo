@@ -46,5 +46,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Attributes")
 	FGameplayAttributeData MaxStrength;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MaxStrength)
+	
+	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Attributes")
+	FGameplayAttributeData SkillLevel;
+	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, SkillLevel)
 };
 

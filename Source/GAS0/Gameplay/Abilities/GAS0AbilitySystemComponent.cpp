@@ -2,6 +2,8 @@
 
 #include "GAS0AbilitySystemComponent.h"
 
+#include "GameFramework/Character.h"
+
 UGAS0AbilitySystemComponent::UGAS0AbilitySystemComponent()
 {
 }
@@ -11,7 +13,6 @@ void UGAS0AbilitySystemComponent::ApplyGameplayEffectToTarget(TSubclassOf<UGamep
 	// 如果已经在服务端（包括 Standalone）
 	if (GetNetMode() == NM_Client)
 	{
-		// 正在客户端，发 RPC 到服务器执行
 		Server_ApplyGameplayEffectToTarget(EffectClass, TargetASC, Level);
 	}
 	else

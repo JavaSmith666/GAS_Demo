@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
+#include "GameplayEffectTypes.h"
 #include "GAS0Character.generated.h"
 
 class USpringArmComponent;
@@ -13,6 +14,8 @@ class UInputAction;
 struct FInputActionValue;
 class UGAS0AbilitySystemComponent;
 class UGameplayAbility;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChangeEvent, float, NewHealth);
 
 USTRUCT(BlueprintType)
 struct FPendingAbilityBinding
@@ -118,6 +121,9 @@ public:
 
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+	
+	UPROPERTY(BlueprintAssignable, Category="Attributes")
+	FOnHealthChangeEvent OnHealthChange;
 
 protected:
 
@@ -132,5 +138,9 @@ private:
 	/** List of abilities and actions waiting for a valid InputComponent to be bound */
 	UPROPERTY()
 	TArray<FPendingAbilityBinding> PendingBindings;
-
+	
+	UFUNCTION()
+	void InitializeSkillDataFromDataTable();
+	
+	void OnAttributeChanged(const FOnAttributeChangeData& Data);
 };

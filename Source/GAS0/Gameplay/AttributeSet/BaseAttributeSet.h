@@ -23,21 +23,21 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 
-	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Attributes")
-	FGameplayAttributeData Hp;
-	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Hp)
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_HP, Category = "Attributes")
+	FGameplayAttributeData HP;
+	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, HP)
 
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Attributes")
-	FGameplayAttributeData MaxHp;
-	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MaxHp)
+	FGameplayAttributeData MaxHP;
+	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MaxHP)
 	
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Attributes")
-	FGameplayAttributeData Mp;
-	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Mp)
+	FGameplayAttributeData MP;
+	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MP)
 	
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Attributes")
-	FGameplayAttributeData MaxMp;
-	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MaxMp)
+	FGameplayAttributeData MaxMP;
+	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MaxMP)
 	
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Attributes")
 	FGameplayAttributeData Strength;
@@ -50,5 +50,9 @@ public:
 	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Attributes")
 	FGameplayAttributeData SkillLevel;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, SkillLevel)
+	
+protected:
+	UFUNCTION()
+	void OnRep_HP(FGameplayAttributeData& RepData);
 };
 

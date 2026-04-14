@@ -19,7 +19,9 @@
 #include "Gameplay/Abilities/DataAssets/GAS0AbilitySettings.h"
 #include "Gameplay/Abilities/DataTables/CharacterSkillSlotsRow.h"
 #include "Gameplay/Abilities/DataAssets/SkillConfig.h"
+#include "Gameplay/AttributeSet/BaseAttributeSet.h"
 
+class UGridGameplayMessageSubsystem;
 class UGAS0CharacterGameplayAbility;
 
 AGAS0Character::AGAS0Character()
@@ -161,46 +163,8 @@ void AGAS0Character::BeginPlay()
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
-
-		// Get DT from settings
-		const UGAS0AbilitySettings* Settings = GetDefault<UGAS0AbilitySettings>();
-		if (Settings && !Settings->CharacterSkillTable.IsNull())
-		{
-			UDataTable* SkillTable = Settings->CharacterSkillTable.LoadSynchronous();
-			if (SkillTable)
-			{
-				// Find row by CharacterID
-				FCharacterSkillSlotsRow* Row = SkillTable->FindRow<FCharacterSkillSlotsRow>(FName(*FString::FromInt(CharacterID)), TEXT("Skill Grant"));
-				if (Row)
-				{
-					TArray<FSoftObjectPath> PathsToLoad;
-					
-					auto ProcessSlot = [&](const FSkillSlotEntry& Entry) {
-						if (!Entry.AbilityClass.IsNull())
-						{
-							PathsToLoad.Add(Entry.AbilityClass.ToSoftObjectPath());
-						}
-						if (!Entry.SkillConfig.IsNull())
-						{
-							PathsToLoad.Add(Entry.SkillConfig.ToSoftObjectPath());
-						}
-						if (!Entry.ActivateAction.IsNull())
-						{
-							PathsToLoad.Add(Entry.ActivateAction.ToSoftObjectPath());
-						}
-					};
-
-					ProcessSlot(Row->Slot0);
-					ProcessSlot(Row->Slot1);
-					ProcessSlot(Row->Slot2);
-
-					if (PathsToLoad.Num() > 0)
-					{
-						UAssetManager::GetStreamableManager().RequestAsyncLoad(PathsToLoad, FStreamableDelegate::CreateUObject(this, &AGAS0Character::OnSkillConfigsLoaded, Row->Slot0, Row->Slot1, Row->Slot2));
-					}
-				}
-			}
-		}
+		InitializeSkillDataFromDataTable();
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetHPAttribute()).AddUObject(this, &AGAS0Character::OnAttributeChanged);
 	}
 }
 
@@ -250,6 +214,55 @@ void AGAS0Character::OnSkillConfigsLoaded(FSkillSlotEntry Slot0, FSkillSlotEntry
 
 	// Attempt binding immediately if InputComponent is already ready
 	TryBindPendingSkills();
+}
+
+void AGAS0Character::InitializeSkillDataFromDataTable()
+{
+	// Get DT from settings
+	const UGAS0AbilitySettings* Settings = GetDefault<UGAS0AbilitySettings>();
+	if (Settings && !Settings->CharacterSkillTable.IsNull())
+	{
+		UDataTable* SkillTable = Settings->CharacterSkillTable.LoadSynchronous();
+		if (SkillTable)
+		{
+			// Find row by CharacterID
+			FCharacterSkillSlotsRow* Row = SkillTable->FindRow<FCharacterSkillSlotsRow>(FName(*FString::FromInt(CharacterID)), TEXT("Skill Grant"));
+			if (Row)
+			{
+				TArray<FSoftObjectPath> PathsToLoad;
+					
+				auto ProcessSlot = [&](const FSkillSlotEntry& Entry) {
+					if (!Entry.AbilityClass.IsNull())
+					{
+						PathsToLoad.Add(Entry.AbilityClass.ToSoftObjectPath());
+					}
+					if (!Entry.SkillConfig.IsNull())
+					{
+						PathsToLoad.Add(Entry.SkillConfig.ToSoftObjectPath());
+					}
+					if (!Entry.ActivateAction.IsNull())
+					{
+						PathsToLoad.Add(Entry.ActivateAction.ToSoftObjectPath());
+					}
+				};
+
+				ProcessSlot(Row->Slot0);
+				ProcessSlot(Row->Slot1);
+				ProcessSlot(Row->Slot2);
+
+				if (PathsToLoad.Num() > 0)
+				{
+					UAssetManager::GetStreamableManager().RequestAsyncLoad(PathsToLoad, FStreamableDelegate::CreateUObject(this, &AGAS0Character::OnSkillConfigsLoaded, Row->Slot0, Row->Slot1, Row->Slot2));
+				}
+			}
+		}
+	}
+}
+
+void AGAS0Character::OnAttributeChanged(const FOnAttributeChangeData& Data)
+{
+	// Authority
+	OnHealthChange.Broadcast(Data.NewValue);
 }
 
 void AGAS0Character::TryBindPendingSkills()

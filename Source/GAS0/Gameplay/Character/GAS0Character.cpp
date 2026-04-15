@@ -176,9 +176,10 @@ void AGAS0Character::OnSkillActionStarted(TSubclassOf<UGameplayAbility> AbilityC
 	}
 }
 
-void AGAS0Character::OnSkillConfigsLoaded(FSkillSlotEntry Slot0, FSkillSlotEntry Slot1, FSkillSlotEntry Slot2)
+void AGAS0Character::OnSkillConfigsLoaded()
 {
-	auto GrantAndBind = [&](const FSkillSlotEntry& Entry) {
+	for (auto& Entry : PendingSkillEntries)
+	{
 		UClass* AbilityClass = Entry.AbilityClass.Get();
 		if (AbilityClass && AbilitySystemComponent)
 		{
@@ -206,11 +207,7 @@ void AGAS0Character::OnSkillConfigsLoaded(FSkillSlotEntry Slot0, FSkillSlotEntry
 				}	
 			}
 		}
-	};
-
-	GrantAndBind(Slot0);
-	GrantAndBind(Slot1);
-	GrantAndBind(Slot2);
+	}
 
 	// Attempt binding immediately if InputComponent is already ready
 	TryBindPendingSkills();
@@ -229,9 +226,10 @@ void AGAS0Character::InitializeSkillDataFromDataTable()
 			FCharacterSkillSlotsRow* Row = SkillTable->FindRow<FCharacterSkillSlotsRow>(FName(*FString::FromInt(CharacterID)), TEXT("Skill Grant"));
 			if (Row)
 			{
+				PendingSkillEntries = Row->SlotEntries;
 				TArray<FSoftObjectPath> PathsToLoad;
-					
-				auto ProcessSlot = [&](const FSkillSlotEntry& Entry) {
+				for (auto& Entry : Row->SlotEntries)
+				{
 					if (!Entry.AbilityClass.IsNull())
 					{
 						PathsToLoad.Add(Entry.AbilityClass.ToSoftObjectPath());
@@ -244,15 +242,11 @@ void AGAS0Character::InitializeSkillDataFromDataTable()
 					{
 						PathsToLoad.Add(Entry.ActivateAction.ToSoftObjectPath());
 					}
-				};
-
-				ProcessSlot(Row->Slot0);
-				ProcessSlot(Row->Slot1);
-				ProcessSlot(Row->Slot2);
+				}
 
 				if (PathsToLoad.Num() > 0)
 				{
-					UAssetManager::GetStreamableManager().RequestAsyncLoad(PathsToLoad, FStreamableDelegate::CreateUObject(this, &AGAS0Character::OnSkillConfigsLoaded, Row->Slot0, Row->Slot1, Row->Slot2));
+					UAssetManager::GetStreamableManager().RequestAsyncLoad(PathsToLoad, FStreamableDelegate::CreateUObject(this, &AGAS0Character::OnSkillConfigsLoaded));
 				}
 			}
 		}

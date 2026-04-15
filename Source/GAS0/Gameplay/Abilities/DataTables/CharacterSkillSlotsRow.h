@@ -47,13 +47,5 @@ struct FCharacterSkillSlotsRow : public FTableRowBase
 
 	/** Skill entry bound to slot 0. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FSkillSlotEntry Slot0;
-
-	/** Skill entry bound to slot 1. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FSkillSlotEntry Slot1;
-
-	/** Skill entry bound to slot 2. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	FSkillSlotEntry Slot2;
+	TArray<FSkillSlotEntry> SlotEntries;
 };

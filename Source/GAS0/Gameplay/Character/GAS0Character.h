@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
 #include "GameplayEffectTypes.h"
+#include "Gameplay/Abilities/DataTables/CharacterSkillSlotsRow.h"
 #include "GAS0Character.generated.h"
 
 class USpringArmComponent;
@@ -128,7 +129,7 @@ public:
 protected:
 
 	/** Callback when async loading of DT entries completes */
-	void OnSkillConfigsLoaded(struct FSkillSlotEntry Slot0, struct FSkillSlotEntry Slot1, struct FSkillSlotEntry Slot2);
+	void OnSkillConfigsLoaded();
 
 	/** Ability System Component - used to grant and manage gameplay abilities */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities", meta = (AllowPrivateAccess = "true"))
@@ -138,6 +139,8 @@ private:
 	/** List of abilities and actions waiting for a valid InputComponent to be bound */
 	UPROPERTY()
 	TArray<FPendingAbilityBinding> PendingBindings;
+	
+	TArray<FSkillSlotEntry> PendingSkillEntries;
 	
 	UFUNCTION()
 	void InitializeSkillDataFromDataTable();

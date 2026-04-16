@@ -31,7 +31,7 @@ public:
 	FGameplayAttributeData MaxHP;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MaxHP)
 	
-	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Attributes")
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_MP, Category = "Attributes")
 	FGameplayAttributeData MP;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MP)
 	
@@ -39,7 +39,7 @@ public:
 	FGameplayAttributeData MaxMP;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MaxMP)
 	
-	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Attributes")
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing=OnRep_Strength, Category = "Attributes")
 	FGameplayAttributeData Strength;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Strength)
 	
@@ -54,5 +54,11 @@ public:
 protected:
 	UFUNCTION()
 	void OnRep_HP(FGameplayAttributeData& RepData);
+	
+	UFUNCTION()
+	void OnRep_MP(FGameplayAttributeData& RepData);
+	
+	UFUNCTION()
+	void OnRep_Strength(FGameplayAttributeData& RepData);
 };
 

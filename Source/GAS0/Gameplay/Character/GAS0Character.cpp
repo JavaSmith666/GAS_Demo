@@ -164,7 +164,9 @@ void AGAS0Character::BeginPlay()
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 		InitializeSkillDataFromDataTable();
-		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetHPAttribute()).AddUObject(this, &AGAS0Character::OnAttributeChanged);
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetHPAttribute()).AddUObject(this, &AGAS0Character::OnHPAttributeChanged);
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetMPAttribute()).AddUObject(this, &AGAS0Character::OnMPAttributeChanged);
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetStrengthAttribute()).AddUObject(this, &AGAS0Character::OnStrengthAttributeChanged);
 	}
 }
 
@@ -178,7 +180,7 @@ void AGAS0Character::OnSkillActionStarted(TSubclassOf<UGameplayAbility> AbilityC
 
 void AGAS0Character::OnSkillConfigsLoaded()
 {
-	for (auto& Entry : PendingSkillEntries)
+	auto GrantAndBind = [&](const FSkillSlotEntry& Entry, int32 AbilityIndex) -> void
 	{
 		UClass* AbilityClass = Entry.AbilityClass.Get();
 		if (AbilityClass && AbilitySystemComponent)
@@ -190,6 +192,7 @@ void AGAS0Character::OnSkillConfigsLoaded()
 				// Use SourceObject to carry the config to the ability instances
 				if (USkillConfig* Config = Entry.SkillConfig.Get())
 				{
+					Config->AbilityIndex = AbilityIndex;
 					Spec.SourceObject = Config;
 				}
 				
@@ -207,8 +210,14 @@ void AGAS0Character::OnSkillConfigsLoaded()
 				}	
 			}
 		}
+	};
+	
+	GrantAndBind(PendingDefaultSkill, -1);
+	for (int32 i = 0; i < PendingSkillEntries.Num(); i++)
+	{
+		GrantAndBind(PendingSkillEntries[i], i);
 	}
-
+	
 	// Attempt binding immediately if InputComponent is already ready
 	TryBindPendingSkills();
 }
@@ -226,9 +235,23 @@ void AGAS0Character::InitializeSkillDataFromDataTable()
 			FCharacterSkillSlotsRow* Row = SkillTable->FindRow<FCharacterSkillSlotsRow>(FName(*FString::FromInt(CharacterID)), TEXT("Skill Grant"));
 			if (Row)
 			{
-				PendingSkillEntries = Row->SlotEntries;
+				PendingSkillEntries = Row->SlotSkills;
+				PendingDefaultSkill = Row->DefaultSkill;
 				TArray<FSoftObjectPath> PathsToLoad;
-				for (auto& Entry : Row->SlotEntries)
+				if (!Row->DefaultSkill.AbilityClass.IsNull())
+				{
+					PathsToLoad.Add(Row->DefaultSkill.AbilityClass.ToSoftObjectPath());
+				}
+				if (!Row->DefaultSkill.SkillConfig.IsNull())
+				{
+					PathsToLoad.Add(Row->DefaultSkill.SkillConfig.ToSoftObjectPath());
+				}
+				if (!Row->DefaultSkill.ActivateAction.IsNull())
+				{
+					PathsToLoad.Add(Row->DefaultSkill.ActivateAction.ToSoftObjectPath());
+				}
+				
+				for (auto& Entry : Row->SlotSkills)
 				{
 					if (!Entry.AbilityClass.IsNull())
 					{
@@ -253,10 +276,22 @@ void AGAS0Character::InitializeSkillDataFromDataTable()
 	}
 }
 
-void AGAS0Character::OnAttributeChanged(const FOnAttributeChangeData& Data)
+void AGAS0Character::OnHPAttributeChanged(const FOnAttributeChangeData& Data)
 {
 	// Authority
-	OnHealthChange.Broadcast(Data.NewValue);
+	OnHPChange.Broadcast(Data.NewValue);
+}
+
+void AGAS0Character::OnMPAttributeChanged(const FOnAttributeChangeData& Data)
+{
+	// Authority
+	OnMPChange.Broadcast(Data.NewValue);
+}
+
+void AGAS0Character::OnStrengthAttributeChanged(const FOnAttributeChangeData& Data)
+{
+	// Authority
+	OnStrengthChange.Broadcast(Data.NewValue);
 }
 
 void AGAS0Character::TryBindPendingSkills()

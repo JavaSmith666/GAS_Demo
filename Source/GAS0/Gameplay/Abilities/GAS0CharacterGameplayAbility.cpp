@@ -21,6 +21,38 @@ void UGAS0CharacterGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInf
 	}
 }
 
+FGameplayAbilityInfo UGAS0CharacterGameplayAbility::GetAbilityInfo(int32 Level) const
+{
+    UGameplayEffect* CooldownGE = GetCooldownGameplayEffect();
+    UGameplayEffect* CostGE = GetCostGameplayEffect();
+    if (!CooldownGE || !CostGE)
+    {
+        return FGameplayAbilityInfo();
+    }
+    
+    float CD = 0.f;
+    ECostType CostType = ECostType::Default;
+    float CostValue = 0.f;
+    CooldownGE->DurationMagnitude.GetStaticMagnitudeIfPossible(Level, CD);
+    FGameplayModifierInfo ModifierInfo = CooldownGE->Modifiers[0];
+    ModifierInfo.ModifierMagnitude.GetStaticMagnitudeIfPossible(Level, CostValue);
+    FString AttributeName = ModifierInfo.Attribute.AttributeName;
+    if (AttributeName == "HP")
+    {
+        CostType = ECostType::HP;
+    }
+    else if (AttributeName == "MP")
+    {
+        CostType = ECostType::MP;
+    }
+    else if (AttributeName == "Strength")
+    {
+        CostType = ECostType::Strength;
+    }
+    
+    return FGameplayAbilityInfo(RoleSkillConfig->AbilityIndex, CD, CostType, CostValue, AbilityMaterialInstance);
+}
+
 void UGAS0CharacterGameplayAbility::ActivateAbility(
     const FGameplayAbilitySpecHandle Handle,
     const FGameplayAbilityActorInfo* ActorInfo,

@@ -12,13 +12,13 @@ void UBaseAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, HP, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, MaxHP, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, MP, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, MaxMP, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, Strength, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, MaxStrength, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UBaseAttributeSet, SkillLevel, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME(UBaseAttributeSet, HP);
+	DOREPLIFETIME(UBaseAttributeSet, MaxHP);
+	DOREPLIFETIME(UBaseAttributeSet, MP);
+	DOREPLIFETIME(UBaseAttributeSet, MaxMP);
+	DOREPLIFETIME(UBaseAttributeSet, Strength);
+	DOREPLIFETIME(UBaseAttributeSet, MaxStrength);
+	DOREPLIFETIME(UBaseAttributeSet, SkillLevel);
 }
 
 void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
@@ -41,11 +41,15 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 
 void UBaseAttributeSet::OnRep_HP(FGameplayAttributeData& RepData)
 {
-	AGAS0Character* OwningCharacter = Cast<AGAS0Character>(GetOwningActor());
-	if (!OwningCharacter)
-	{
-		return;
-	}
-	
-	OwningCharacter->OnHealthChange.Broadcast(RepData.GetCurrentValue());
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, HP, RepData);
+}
+
+void UBaseAttributeSet::OnRep_MP(FGameplayAttributeData& RepData)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, MP, RepData);
+}
+
+void UBaseAttributeSet::OnRep_Strength(FGameplayAttributeData& RepData)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UBaseAttributeSet, Strength, RepData);
 }

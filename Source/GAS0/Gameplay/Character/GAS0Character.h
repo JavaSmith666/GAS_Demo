@@ -16,7 +16,9 @@ struct FInputActionValue;
 class UGAS0AbilitySystemComponent;
 class UGameplayAbility;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChangeEvent, float, NewHealth);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHPChangeEvent, float, NewHP);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMPChangeEvent, float, NewMP);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStrengthChangeEvent, float, NewStrength);
 
 USTRUCT(BlueprintType)
 struct FPendingAbilityBinding
@@ -124,7 +126,13 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 	
 	UPROPERTY(BlueprintAssignable, Category="Attributes")
-	FOnHealthChangeEvent OnHealthChange;
+	FOnHPChangeEvent OnHPChange;
+	
+	UPROPERTY(BlueprintAssignable, Category="Attributes")
+	FOnMPChangeEvent OnMPChange;
+	
+	UPROPERTY(BlueprintAssignable, Category="Attributes")
+	FOnStrengthChangeEvent OnStrengthChange;
 
 protected:
 
@@ -141,9 +149,12 @@ private:
 	TArray<FPendingAbilityBinding> PendingBindings;
 	
 	TArray<FSkillSlotEntry> PendingSkillEntries;
+	FSkillSlotEntry PendingDefaultSkill;
 	
 	UFUNCTION()
 	void InitializeSkillDataFromDataTable();
 	
-	void OnAttributeChanged(const FOnAttributeChangeData& Data);
+	void OnHPAttributeChanged(const FOnAttributeChangeData& Data);
+	void OnMPAttributeChanged(const FOnAttributeChangeData& Data);
+	void OnStrengthAttributeChanged(const FOnAttributeChangeData& Data);
 };

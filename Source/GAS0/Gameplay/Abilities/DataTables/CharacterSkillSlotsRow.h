@@ -44,8 +44,11 @@ struct FCharacterSkillSlotsRow : public FTableRowBase
 	/** Character identifier/name for this row. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FText CharacterName;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FSkillSlotEntry DefaultSkill;
 
 	/** Skill entry bound to slot 0. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TArray<FSkillSlotEntry> SlotEntries;
+	TArray<FSkillSlotEntry> SlotSkills;
 };

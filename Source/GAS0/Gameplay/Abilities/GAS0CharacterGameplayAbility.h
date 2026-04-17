@@ -63,6 +63,9 @@ public:
     
     UFUNCTION(BlueprintCallable)
     FGameplayAbilityInfo GetAbilityInfo(int32 Level) const;
+    
+    UFUNCTION(BlueprintNativeEvent)
+    void InitSkillIcon(int32 InAbilityIndex);
 
 protected:
 

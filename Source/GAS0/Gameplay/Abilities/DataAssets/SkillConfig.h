@@ -17,6 +17,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability|Animation")
 	TObjectPtr<UAnimMontage> FireMontage;
 	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability|Info")
 	int32 AbilityIndex = -1;
 };
 

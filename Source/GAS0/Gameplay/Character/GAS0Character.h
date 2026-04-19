@@ -7,6 +7,8 @@
 #include "Logging/LogMacros.h"
 #include "GameplayEffectTypes.h"
 #include "Gameplay/Abilities/DataTables/CharacterSkillSlotsRow.h"
+#include "Gameplay/Core/GAS0PlayerController.h"
+#include "GameplayTagContainer.h"
 #include "GAS0Character.generated.h"
 
 class USpringArmComponent;
@@ -19,6 +21,7 @@ class UGameplayAbility;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHPChangeEvent, float, NewHP);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMPChangeEvent, float, NewMP);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStrengthChangeEvent, float, NewStrength);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMainUICreated);
 
 USTRUCT(BlueprintType)
 struct FPendingAbilityBinding
@@ -42,52 +45,24 @@ UCLASS(abstract)
 class AGAS0Character : public ACharacter
 {
 	GENERATED_BODY()
-
-	/** Camera boom positioning the camera behind the character */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
-	USpringArmComponent* CameraBoom;
-
-	/** Follow camera */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
-	UCameraComponent* FollowCamera;
 	
+#pragma region Base
 protected:
-
-	/** Jump Input Action */
-	UPROPERTY(EditAnywhere, Category="Input")
-	UInputAction* JumpAction;
-
-	/** Move Input Action */
-	UPROPERTY(EditAnywhere, Category="Input")
-	UInputAction* MoveAction;
-
-	/** Look Input Action */
-	UPROPERTY(EditAnywhere, Category="Input")
-	UInputAction* LookAction;
-
-	/** Mouse Look Input Action */
-	UPROPERTY(EditAnywhere, Category="Input")
-	UInputAction* MouseLookAction;
-
-	/** Minimum allowed camera pitch (degrees). Use to clamp camera looking down. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
-	float MinCameraPitch = -40.f;
-
-	/** Maximum allowed camera pitch (degrees). Use to clamp camera looking up. */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
-	float MaxCameraPitch = 40.f;
-	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 CharacterID = -1;
+	
+	AGAS0PlayerController* PlayerController = nullptr;
 
 public:
-
 	/** Constructor */
 	AGAS0Character();
 
 	/** Actor lifecycle */
 	virtual void BeginPlay() override;
+#pragma endregion Base
 	
+#pragma region Input
+public:
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
 
@@ -112,37 +87,49 @@ public:
 	/** Handles jump pressed inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
-
-	/** Generic handler for skill input actions */
-	void OnSkillActionStarted(TSubclassOf<UGameplayAbility> AbilityClass);
-
-	/** Attempts to bind any skills that were loaded but didn't have an InputComponent yet */
-	void TryBindPendingSkills();
-
-	/** Returns CameraBoom subobject **/
-	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
-
-	/** Returns FollowCamera subobject **/
-	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 	
-	UPROPERTY(BlueprintAssignable, Category="Attributes")
-	FOnHPChangeEvent OnHPChange;
-	
-	UPROPERTY(BlueprintAssignable, Category="Attributes")
-	FOnMPChangeEvent OnMPChange;
-	
-	UPROPERTY(BlueprintAssignable, Category="Attributes")
-	FOnStrengthChangeEvent OnStrengthChange;
-
 protected:
+	/** Jump Input Action */
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* JumpAction;
 
+	/** Move Input Action */
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* MoveAction;
+
+	/** Look Input Action */
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* LookAction;
+
+	/** Mouse Look Input Action */
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* MouseLookAction;
+#pragma endregion Input
+	
+#pragma region UI
+public:
+	UFUNCTION(BlueprintCallable, Category="UI")
+	void OnMainUICreatedEvent();
+	
+	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+	void InitSkillIcon(FGameplayAbilityInfo AbilityInfo);
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
+	bool bHasMainUICreated = false;
+#pragma endregion UI
+
+#pragma region Abilities
+public:	
+	UGAS0AbilitySystemComponent* GetAbilitySystemComponent() const { return AbilitySystemComponent; }
+	
+protected:
 	/** Callback when async loading of DT entries completes */
 	void OnSkillConfigsLoaded();
 
 	/** Ability System Component - used to grant and manage gameplay abilities */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities", meta = (AllowPrivateAccess = "true"))
 	UGAS0AbilitySystemComponent* AbilitySystemComponent;
-
+	
 private:
 	/** List of abilities and actions waiting for a valid InputComponent to be bound */
 	UPROPERTY()
@@ -154,7 +141,64 @@ private:
 	UFUNCTION()
 	void InitializeSkillDataFromDataTable();
 	
+	/** Generic handler for skill input actions */
+	void OnSkillActionStarted(TSubclassOf<UGameplayAbility> AbilityClass);
+
+	/** Attempts to bind any skills that were loaded but didn't have an InputComponent yet */
+	void TryBindPendingSkills();
+#pragma endregion Abilities
+	
+#pragma region Camera
+protected:
+	/** Returns CameraBoom subobject **/
+	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
+
+	/** Returns FollowCamera subobject **/
+	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+	
+	/** Minimum allowed camera pitch (degrees). Use to clamp camera looking down. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
+	float MinCameraPitch = -40.f;
+
+	/** Maximum allowed camera pitch (degrees). Use to clamp camera looking up. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Camera")
+	float MaxCameraPitch = 40.f;
+	
+private:
+	/** Camera boom positioning the camera behind the character */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
+	USpringArmComponent* CameraBoom;
+
+	/** Follow camera */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
+	UCameraComponent* FollowCamera;
+#pragma endregion Camera
+	
+#pragma region Attributes
+public:
+	UPROPERTY(BlueprintAssignable, Category="Attributes")
+	FOnHPChangeEvent OnHPChange;
+	
+	UPROPERTY(BlueprintAssignable, Category="Attributes")
+	FOnMPChangeEvent OnMPChange;
+	
+	UPROPERTY(BlueprintAssignable, Category="Attributes")
+	FOnStrengthChangeEvent OnStrengthChange;
+	
+	UPROPERTY(BlueprintAssignable, Category="Attributes")
+	FOnMainUICreated OnMainUICreated;
+	
+private:
 	void OnHPAttributeChanged(const FOnAttributeChangeData& Data);
 	void OnMPAttributeChanged(const FOnAttributeChangeData& Data);
 	void OnStrengthAttributeChanged(const FOnAttributeChangeData& Data);
+#pragma endregion Attributes
+	
+#pragma region Movement
+public:
+	void SetFrictionZero();
+	void ResetFriction();
+protected:
+	float LastFriction;
+#pragma endregion Movement
 };

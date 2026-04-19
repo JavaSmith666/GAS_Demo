@@ -4,6 +4,8 @@
 #include "Engine/DataAsset.h"
 #include "SkillConfig.generated.h"
 
+class UGameplayEffect;
+
 /**
  * Base data asset for all skill configurations.
  */
@@ -30,11 +32,25 @@ public:
 	
 };
 
-UCLASS()
+UCLASS(BlueprintType)
 class UHealthRegenConfig : public USkillConfig
 {
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameplayEffect")
+	TSubclassOf<UGameplayEffect> HealthRegenEffect;
+};
+
+UCLASS(BlueprintType)
+class UDashConfig : public USkillConfig
+{
+	GENERATED_BODY()
 	
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float ForwardImpulse = 0.f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameplayEffect")
+	TSubclassOf<UGameplayEffect> DashDamageEffect;
 };

@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Gameplay/Abilities/GAS0CharacterGameplayAbility.h"
-#include "ChaGA_HealthRegen.generated.h"
+#include "ChaGA_Dash.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class UChaGA_HealthRegen : public UGAS0CharacterGameplayAbility
+class UChaGA_Dash : public UGAS0CharacterGameplayAbility
 {
 	GENERATED_BODY()
 	
@@ -21,9 +21,10 @@ protected:
 		const FGameplayAbilityActivationInfo ActivationInfo,
 		const FGameplayEventData* TriggerEventData) override;
 	
-	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, 
-		const FGameplayAbilityActorInfo* ActorInfo, 
-		const FGameplayTagContainer* SourceTags = nullptr, 
-		const FGameplayTagContainer* TargetTags = nullptr, 
-		OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const;
+	virtual void PreGAS0CharacterGameplayAbilityEnded(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo,
+		bool bReplicateEndAbility,
+		bool bWasCancelled) override;
 };

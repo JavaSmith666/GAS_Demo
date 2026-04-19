@@ -18,7 +18,6 @@ void UBaseAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(UBaseAttributeSet, MaxMP);
 	DOREPLIFETIME(UBaseAttributeSet, Strength);
 	DOREPLIFETIME(UBaseAttributeSet, MaxStrength);
-	DOREPLIFETIME(UBaseAttributeSet, SkillLevel);
 }
 
 void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)

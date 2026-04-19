@@ -5,10 +5,12 @@
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
 #include "DataAssets/SkillConfig.h"
+#include "Gameplay/AttributeSet/BaseAttributeSet.h"
 #include "GAS0CharacterGameplayAbility.generated.h"
 
 class UAnimMontage;
 class UAbilityTask_PlayMontageAndWait;
+class AGAS0Character;
 
 UENUM(BlueprintType)
 enum class ECostType : uint8
@@ -51,7 +53,7 @@ class UGAS0CharacterGameplayAbility : public UGameplayAbility
 
 public:
     UGAS0CharacterGameplayAbility();
-
+    
     /** Called when the ability is given to an AbilitySystemComponent */
     virtual void OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
     
@@ -62,10 +64,13 @@ public:
     UMaterialInstance* AbilityMaterialInstance = nullptr;
     
     UFUNCTION(BlueprintCallable)
-    FGameplayAbilityInfo GetAbilityInfo(int32 Level) const;
+    FGameplayAbilityInfo GetAbilityInfo() const;
     
-    UFUNCTION(BlueprintNativeEvent)
-    void InitSkillIcon(int32 InAbilityIndex);
+    UFUNCTION(BlueprintCallable)
+    int32 GetAbilityIndex() const { return AbilityIndex; }
+    
+    UFUNCTION(BlueprintImplementableEvent)
+    void StartCD();
 
 protected:
 
@@ -74,6 +79,12 @@ protected:
         const FGameplayAbilityActorInfo* ActorInfo,
         const FGameplayAbilityActivationInfo ActivationInfo,
         const FGameplayEventData* TriggerEventData) override;
+    
+    virtual void OnGAS0CharacterGameplayAbilityActivated(
+        const FGameplayAbilitySpecHandle Handle,
+        const FGameplayAbilityActorInfo* ActorInfo,
+        const FGameplayAbilityActivationInfo ActivationInfo,
+        const FGameplayEventData* TriggerEventData);
 
     virtual void EndAbility(
         const FGameplayAbilitySpecHandle Handle,
@@ -81,6 +92,13 @@ protected:
         const FGameplayAbilityActivationInfo ActivationInfo,
         bool bReplicateEndAbility,
         bool bWasCancelled) override;
+    
+    virtual void PreGAS0CharacterGameplayAbilityEnded(
+        const FGameplayAbilitySpecHandle Handle,
+        const FGameplayAbilityActorInfo* ActorInfo,
+        const FGameplayAbilityActivationInfo ActivationInfo,
+        bool bReplicateEndAbility,
+        bool bWasCancelled);
 
     /** Plays fire montage and binds end callbacks. Override for custom play behavior. */
     virtual bool PlayFireMontage();
@@ -96,6 +114,9 @@ protected:
 
     UFUNCTION()
     void OnFireMontageCancelled();
+    
+    UFUNCTION()
+    void OnMainUICreated();
 
 protected:
     UPROPERTY(Transient)
@@ -103,7 +124,12 @@ protected:
     
     UPROPERTY(Transient)
     USkillConfig* RoleSkillConfig = nullptr;
-
+    
+    int32 AbilityIndex = -1;
+    
+    UPROPERTY(Transient)
+    AGAS0Character* OwnerCharacter = nullptr;
+    
 private:
     void HandleFireMontageEnded(bool bWasCancelled);
 };

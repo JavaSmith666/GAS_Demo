@@ -47,10 +47,6 @@ public:
 	FGameplayAttributeData MaxStrength;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MaxStrength)
 	
-	UPROPERTY(BlueprintReadOnly, Replicated, Category = "Attributes")
-	FGameplayAttributeData SkillLevel;
-	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, SkillLevel)
-	
 protected:
 	UFUNCTION()
 	void OnRep_HP(FGameplayAttributeData& RepData);

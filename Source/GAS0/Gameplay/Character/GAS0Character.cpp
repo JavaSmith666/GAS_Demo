@@ -156,6 +156,11 @@ void AGAS0Character::DoJumpEnd()
 	StopJumping();
 }
 
+void AGAS0Character::OnMainUICreatedEvent()
+{
+	OnMainUICreated.Broadcast();
+}
+
 void AGAS0Character::BeginPlay()
 {
 	Super::BeginPlay();
@@ -168,6 +173,8 @@ void AGAS0Character::BeginPlay()
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetMPAttribute()).AddUObject(this, &AGAS0Character::OnMPAttributeChanged);
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetStrengthAttribute()).AddUObject(this, &AGAS0Character::OnStrengthAttributeChanged);
 	}
+	
+	PlayerController = Cast<AGAS0PlayerController>(GetController());
 }
 
 void AGAS0Character::OnSkillActionStarted(TSubclassOf<UGameplayAbility> AbilityClass)
@@ -292,6 +299,23 @@ void AGAS0Character::OnStrengthAttributeChanged(const FOnAttributeChangeData& Da
 {
 	// Authority
 	OnStrengthChange.Broadcast(Data.NewValue);
+}
+
+void AGAS0Character::SetFrictionZero()
+{
+	if (UCharacterMovementComponent* CharacterMovementComponent = GetCharacterMovement())
+	{
+		LastFriction = CharacterMovementComponent->GroundFriction;
+		CharacterMovementComponent->GroundFriction = 0.f;
+	}
+}
+
+void AGAS0Character::ResetFriction()
+{
+	if (UCharacterMovementComponent* CharacterMovementComponent = GetCharacterMovement())
+	{
+		CharacterMovementComponent->GroundFriction = LastFriction;
+	}
 }
 
 void AGAS0Character::TryBindPendingSkills()

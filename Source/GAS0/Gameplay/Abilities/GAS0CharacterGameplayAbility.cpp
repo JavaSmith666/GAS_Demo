@@ -1,9 +1,11 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "GAS0CharacterGameplayAbility.h"
+
+#include "GAS0AbilitySystemComponent.h"
+#include "Gameplay/Character/GAS0Character.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Animation/AnimMontage.h"
-#include "Gameplay/Character/GAS0Character.h"
 
 UGAS0CharacterGameplayAbility::UGAS0CharacterGameplayAbility()
 {
@@ -19,17 +21,23 @@ void UGAS0CharacterGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInf
 	if (USkillConfig* Config = Cast<USkillConfig>(Spec.SourceObject))
 	{
 		RoleSkillConfig = Config;
+	    AbilityIndex = Config->AbilityIndex;
 	    if (AGAS0Character* Character = Cast<AGAS0Character>(ActorInfo->OwnerActor.Get()))
 	    {
-	        if (Character->GetNetMode() != NM_DedicatedServer)
+	        OwnerCharacter = Character;
+	        if (OwnerCharacter->bHasMainUICreated)
 	        {
-	            InitSkillIcon(Config->AbilityIndex);
+	            OnMainUICreated();
+	        }
+	        else
+	        {
+	            Character->OnMainUICreated.AddDynamic(this, &UGAS0CharacterGameplayAbility::OnMainUICreated);
 	        }
 	    }
 	}
 }
 
-FGameplayAbilityInfo UGAS0CharacterGameplayAbility::GetAbilityInfo(int32 Level) const
+FGameplayAbilityInfo UGAS0CharacterGameplayAbility::GetAbilityInfo() const
 {
     UGameplayEffect* CooldownGE = GetCooldownGameplayEffect();
     UGameplayEffect* CostGE = GetCostGameplayEffect();
@@ -41,9 +49,9 @@ FGameplayAbilityInfo UGAS0CharacterGameplayAbility::GetAbilityInfo(int32 Level) 
     float CD = 0.f;
     ECostType CostType = ECostType::Default;
     float CostValue = 0.f;
-    CooldownGE->DurationMagnitude.GetStaticMagnitudeIfPossible(Level, CD);
+    CooldownGE->DurationMagnitude.GetStaticMagnitudeIfPossible(GetCurrentAbilitySpec()->Level, CD);
     FGameplayModifierInfo ModifierInfo = CostGE->Modifiers[0];
-    ModifierInfo.ModifierMagnitude.GetStaticMagnitudeIfPossible(Level, CostValue);
+    ModifierInfo.ModifierMagnitude.GetStaticMagnitudeIfPossible(GetCurrentAbilitySpec()->Level, CostValue);
     FString AttributeName = ModifierInfo.Attribute.AttributeName;
     if (AttributeName == "HP")
     {
@@ -61,10 +69,6 @@ FGameplayAbilityInfo UGAS0CharacterGameplayAbility::GetAbilityInfo(int32 Level) 
     return FGameplayAbilityInfo(RoleSkillConfig->AbilityIndex, CD, CostType, CostValue, AbilityMaterialInstance);
 }
 
-void UGAS0CharacterGameplayAbility::InitSkillIcon_Implementation(int32 InAbilityIndex)
-{
-}
-
 void UGAS0CharacterGameplayAbility::ActivateAbility(
     const FGameplayAbilitySpecHandle Handle,
     const FGameplayAbilityActorInfo* ActorInfo,
@@ -72,17 +76,24 @@ void UGAS0CharacterGameplayAbility::ActivateAbility(
     const FGameplayEventData* TriggerEventData)
 {
     Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+    
+    OnGAS0CharacterGameplayAbilityActivated(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+}
 
+void UGAS0CharacterGameplayAbility::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbilitySpecHandle Handle,
+    const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+    const FGameplayEventData* TriggerEventData)
+{
     // Fallback if RoleSkillConfig is still null (e.g. for non-instanced abilities or if logic missed it)
     if (!RoleSkillConfig)
     {
-	    if (FGameplayAbilitySpec* Spec = GetCurrentAbilitySpec())
-	    {
-		    RoleSkillConfig = Cast<USkillConfig>(Spec->SourceObject);
-	    }
+        if (FGameplayAbilitySpec* Spec = GetCurrentAbilitySpec())
+        {
+            RoleSkillConfig = Cast<USkillConfig>(Spec->SourceObject);
+        }
     }
     
-    if (!ActorInfo || !RoleSkillConfig)
+    if (!ActorInfo || !RoleSkillConfig || !OwnerCharacter)
     {
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;
@@ -98,6 +109,11 @@ void UGAS0CharacterGameplayAbility::ActivateAbility(
     {
         EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
         return;
+    }
+    
+    if (OwnerCharacter->GetNetMode() != NM_DedicatedServer)
+    {
+        StartCD();
     }
 }
 
@@ -130,8 +146,16 @@ void UGAS0CharacterGameplayAbility::EndAbility(
     bool bReplicateEndAbility,
     bool bWasCancelled)
 {
-    ActiveMontageTask = nullptr;
+    PreGAS0CharacterGameplayAbilityEnded(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+    
     Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void UGAS0CharacterGameplayAbility::PreGAS0CharacterGameplayAbilityEnded(const FGameplayAbilitySpecHandle Handle,
+    const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+    bool bReplicateEndAbility, bool bWasCancelled)
+{
+    ActiveMontageTask = nullptr;
 }
 
 void UGAS0CharacterGameplayAbility::OnFireMontageCompleted()
@@ -152,6 +176,14 @@ void UGAS0CharacterGameplayAbility::OnFireMontageInterrupted()
 void UGAS0CharacterGameplayAbility::OnFireMontageCancelled()
 {
     HandleFireMontageEnded(true);
+}
+
+void UGAS0CharacterGameplayAbility::OnMainUICreated()
+{
+    if (OwnerCharacter)
+    {
+        OwnerCharacter->InitSkillIcon(GetAbilityInfo());
+    }
 }
 
 void UGAS0CharacterGameplayAbility::HandleFireMontageEnded(bool bWasCancelled)

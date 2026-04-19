@@ -196,8 +196,12 @@ private:
 	
 #pragma region Movement
 public:
+	UFUNCTION(BlueprintCallable, Category="Movement")
 	void SetFrictionZero();
+	
+	UFUNCTION(BlueprintCallable, Category="Movement")
 	void ResetFriction();
+	
 protected:
 	float LastFriction;
 #pragma endregion Movement

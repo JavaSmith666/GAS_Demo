@@ -1,0 +1,106 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#include "Gameplay/Abilities/ChaGA_Laser.h"
+
+#include "GAS0AbilitySystemComponent.h"
+#include "Components/ArrowComponent.h"
+#include "Gameplay/Character/GAS0Character.h"
+#include "Gameplay/SummonItems/LaserActor.h"
+
+void UChaGA_Laser::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+	Super::OnGiveAbility(ActorInfo, Spec);
+	
+	ULaserConfig* LaserConfig = Cast<ULaserConfig>(RoleSkillConfig);
+	if (!LaserConfig || !OwnerCharacter)
+	{
+		return;
+	}
+	
+	if (OwnerCharacter->GetNetMode() < NM_Client)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.Owner = OwnerCharacter;
+		SpawnParams.Instigator = OwnerCharacter;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		
+		UArrowComponent* LaserPoint = OwnerCharacter->GetLaserPoint();
+		if (!LaserPoint)
+		{
+			return;
+		}
+		
+		SpawnedLaserActor = GetWorld()->SpawnActor<ALaserActor>(LaserConfig->LaserActorClass, FVector(), FRotator(), SpawnParams);
+		if (SpawnedLaserActor)
+		{
+			SpawnedLaserActor->AttachToComponent(LaserPoint, FAttachmentTransformRules::SnapToTargetIncludingScale);
+			SpawnedLaserActor->SetActorHiddenInGame(true);
+			SpawnedLaserActor->SetActorTickEnabled(false);
+		}
+	}
+}
+
+void UChaGA_Laser::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbilitySpecHandle Handle,
+                                                           const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+                                                           const FGameplayEventData* TriggerEventData)
+{	
+	Super::OnGAS0CharacterGameplayAbilityActivated(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+	
+	ULaserConfig* LaserConfig = Cast<ULaserConfig>(RoleSkillConfig);
+	if (!LaserConfig || !OwnerCharacter)
+	{
+		return;
+	}
+	
+	if (UGAS0AbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent())
+	{
+		ASC->AddLooseGameplayTag(LaserConfig->LaserCostTag);
+	}
+	
+	if (OwnerCharacter->GetNetMode() < NM_Client)
+	{
+		if (SpawnedLaserActor)
+		{
+			SpawnedLaserActor->SetActorHiddenInGame(false);
+			SpawnedLaserActor->SetActorTickEnabled(true);
+		}
+	}
+	
+	if (APlayerController* PC = OwnerCharacter->GetPlayerController())
+	{
+		OwnerCharacter->UpdateCameraLockState(true);
+	}
+}
+
+void UChaGA_Laser::PreGAS0CharacterGameplayAbilityEnded(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
+	bool bReplicateEndAbility, bool bWasCancelled)
+{
+	if (APlayerController* PC = OwnerCharacter->GetPlayerController())
+	{
+		OwnerCharacter->UpdateCameraLockState(false);
+	}
+	
+	ULaserConfig* LaserConfig = Cast<ULaserConfig>(RoleSkillConfig);
+	if (!LaserConfig)
+	{
+		return;
+	}
+	
+	if (UGAS0AbilitySystemComponent* ASC = OwnerCharacter ? OwnerCharacter->GetAbilitySystemComponent() : nullptr)
+	{
+		ASC->RemoveLooseGameplayTag(LaserConfig->LaserCostTag);
+	}
+	
+	if (OwnerCharacter->GetNetMode() < NM_Client)
+	{
+		if (SpawnedLaserActor)
+		{
+			SpawnedLaserActor->SetActorHiddenInGame(true);
+			SpawnedLaserActor->SetActorTickEnabled(false);
+			SpawnedLaserActor->ClearCurrentHitCharacterDamageEffect();
+		}
+	}
+	
+	Super::PreGAS0CharacterGameplayAbilityEnded(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}

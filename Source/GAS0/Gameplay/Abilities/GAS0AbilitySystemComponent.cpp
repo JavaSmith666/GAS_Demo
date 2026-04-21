@@ -2,7 +2,6 @@
 
 #include "GAS0AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
-#include "Gameplay/Character/GAS0Character.h"
 
 UGAS0AbilitySystemComponent::UGAS0AbilitySystemComponent()
 {

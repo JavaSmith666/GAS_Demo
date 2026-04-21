@@ -1,10 +1,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Engine/DataAsset.h"
 #include "SkillConfig.generated.h"
 
 class UGameplayEffect;
+class ALaserActor;
 
 /**
  * Base data asset for all skill configurations.
@@ -21,6 +23,9 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability|Info")
 	int32 AbilityIndex = -1;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	bool bShouldEndAbilityOnFireMontageCompleted = true;
 };
 
 UCLASS(BlueprintType)
@@ -54,3 +59,20 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameplayEffect")
 	TSubclassOf<UGameplayEffect> DashDamageEffect;
 };
+
+UCLASS(BlueprintType)
+class ULaserConfig : public USkillConfig
+{
+	GENERATED_BODY()
+	
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSubclassOf<UGameplayEffect> LaserDamageEffect;
+	
+	UPROPERTY(editAnywhere, BlueprintReadOnly)
+	TSubclassOf<ALaserActor> LaserActorClass;
+	
+	UPROPERTY(editAnywhere, BlueprintReadOnly)
+	FGameplayTag LaserCostTag;
+};
+

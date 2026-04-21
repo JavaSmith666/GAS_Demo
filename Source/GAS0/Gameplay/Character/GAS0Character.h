@@ -8,7 +8,6 @@
 #include "GameplayEffectTypes.h"
 #include "Gameplay/Abilities/DataTables/CharacterSkillSlotsRow.h"
 #include "Gameplay/Core/GAS0PlayerController.h"
-#include "GameplayTagContainer.h"
 #include "GAS0Character.generated.h"
 
 class USpringArmComponent;
@@ -17,6 +16,7 @@ class UInputAction;
 struct FInputActionValue;
 class UGAS0AbilitySystemComponent;
 class UGameplayAbility;
+class UArrowComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHPChangeEvent, float, NewHP);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMPChangeEvent, float, NewMP);
@@ -47,19 +47,32 @@ class AGAS0Character : public ACharacter
 	GENERATED_BODY()
 	
 #pragma region Base
-protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 CharacterID = -1;
-	
-	AGAS0PlayerController* PlayerController = nullptr;
-
 public:
 	/** Constructor */
 	AGAS0Character();
 
 	/** Actor lifecycle */
 	virtual void BeginPlay() override;
+	
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 CharacterID = -1;
 #pragma endregion Base
+	
+#pragma region State
+public:
+	bool IsDead() const { return bIsDead; }
+	
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsDead = false;
+#pragma endregion State
+	
+#pragma region PlayerController
+public:
+	APlayerController* GetPlayerController() const;
+	
+#pragma endregion PlayerController
 	
 #pragma region Input
 public:
@@ -121,6 +134,10 @@ public:
 #pragma region Abilities
 public:	
 	UGAS0AbilitySystemComponent* GetAbilitySystemComponent() const { return AbilitySystemComponent; }
+	UArrowComponent* GetLaserPoint() const { return LaserPoint; }
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Components")
+    UArrowComponent* LaserPoint = nullptr;
 	
 protected:
 	/** Callback when async loading of DT entries completes */
@@ -138,17 +155,22 @@ private:
 	TArray<FSkillSlotEntry> PendingSkillEntries;
 	FSkillSlotEntry PendingDefaultSkill;
 	
-	UFUNCTION()
 	void InitializeSkillDataFromDataTable();
+	void BindCancelAction();
+	void OnCancelActionBound();
 	
 	/** Generic handler for skill input actions */
 	void OnSkillActionStarted(TSubclassOf<UGameplayAbility> AbilityClass);
 
 	/** Attempts to bind any skills that were loaded but didn't have an InputComponent yet */
 	void TryBindPendingSkills();
+
 #pragma endregion Abilities
 	
 #pragma region Camera
+public:
+	void UpdateCameraLockState(bool bLock);
+	
 protected:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
@@ -202,7 +224,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Movement")
 	void ResetFriction();
 	
+	UFUNCTION(BlueprintCallable, Category="Movement")
+	void PushAway(AGAS0Character* InInstigator, float Strength, float DelayTime = 0.f);
+	
+	void OnPushAwayDelayTimeReached();
+	
+	FTimerHandle PushAwayTimerHandle;
+	
 protected:
 	float LastFriction;
 #pragma endregion Movement
+	
+#pragma region Effects
+public:
+	UFUNCTION(BlueprintCallable, Category="Effects")
+	void Stun(float Duration);
+	
+	void OnStunDurationReached();
+	
+	FTimerHandle StunTimerHandle;
+	
+#pragma endregion Effects
 };

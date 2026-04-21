@@ -1,6 +1,9 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "GAS0Character.h"
+
+#include "GAS0CharacterGlobalConfig.h"
+#include "GAS0CharacterSettings.h"
 #include "Engine/LocalPlayer.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -20,9 +23,8 @@
 #include "Gameplay/Abilities/DataTables/CharacterSkillSlotsRow.h"
 #include "Gameplay/Abilities/DataAssets/SkillConfig.h"
 #include "Gameplay/AttributeSet/BaseAttributeSet.h"
+#include "Components/ArrowComponent.h"
 
-class UGridGameplayMessageSubsystem;
-class UGAS0CharacterGameplayAbility;
 
 AGAS0Character::AGAS0Character()
 {
@@ -52,6 +54,10 @@ AGAS0Character::AGAS0Character()
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 400.0f;
 	CameraBoom->bUsePawnControlRotation = true;
+	
+	// Create LaserPoint component
+	LaserPoint = CreateDefaultSubobject<UArrowComponent>(TEXT("LaserPoint"));
+	LaserPoint->SetupAttachment(RootComponent);
 
 	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
@@ -82,11 +88,17 @@ void AGAS0Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 		// Try to bind any skills that might have loaded before this was called
 		TryBindPendingSkills();
+		BindCancelAction();
 	}
 	else
 	{
 		UE_LOG(LogGAS0, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
 	}
+}
+
+APlayerController* AGAS0Character::GetPlayerController() const
+{
+	return Cast<APlayerController>(GetController());
 }
 
 void AGAS0Character::Move(const FInputActionValue& Value)
@@ -172,16 +184,6 @@ void AGAS0Character::BeginPlay()
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetHPAttribute()).AddUObject(this, &AGAS0Character::OnHPAttributeChanged);
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetMPAttribute()).AddUObject(this, &AGAS0Character::OnMPAttributeChanged);
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetStrengthAttribute()).AddUObject(this, &AGAS0Character::OnStrengthAttributeChanged);
-	}
-	
-	PlayerController = Cast<AGAS0PlayerController>(GetController());
-}
-
-void AGAS0Character::OnSkillActionStarted(TSubclassOf<UGameplayAbility> AbilityClass)
-{
-	if (AbilitySystemComponent && AbilityClass)
-	{
-		AbilitySystemComponent->TryActivateAbilityByClass(AbilityClass);
 	}
 }
 
@@ -283,21 +285,45 @@ void AGAS0Character::InitializeSkillDataFromDataTable()
 	}
 }
 
+void AGAS0Character::BindCancelAction()
+{
+	if (InputComponent && IsLocallyControlled())
+	{
+		if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent))
+		{
+			const UGAS0CharacterSettings* Settings = GetDefault<UGAS0CharacterSettings>();
+			if (Settings && !Settings->CharacterGlobalConfig.IsNull())
+			{
+				UGAS0CharacterGlobalConfig* CharacterGlobalConfig = Settings->CharacterGlobalConfig.LoadSynchronous();
+				if (CharacterGlobalConfig && CharacterGlobalConfig->CancelAbilityAction)
+				{
+					EIC->BindAction(CharacterGlobalConfig->CancelAbilityAction, ETriggerEvent::Started, this, &AGAS0Character::OnCancelActionBound);
+				}
+			}
+		}
+	}
+}
+
+void AGAS0Character::OnCancelActionBound()
+{
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->CancelAllAbilities();
+	}
+}
+
 void AGAS0Character::OnHPAttributeChanged(const FOnAttributeChangeData& Data)
 {
-	// Authority
 	OnHPChange.Broadcast(Data.NewValue);
 }
 
 void AGAS0Character::OnMPAttributeChanged(const FOnAttributeChangeData& Data)
 {
-	// Authority
 	OnMPChange.Broadcast(Data.NewValue);
 }
 
 void AGAS0Character::OnStrengthAttributeChanged(const FOnAttributeChangeData& Data)
 {
-	// Authority
 	OnStrengthChange.Broadcast(Data.NewValue);
 }
 
@@ -318,6 +344,51 @@ void AGAS0Character::ResetFriction()
 	}
 }
 
+void AGAS0Character::PushAway(AGAS0Character* InInstigator, float Strength, float DelayTime)
+{
+	if (!InInstigator)
+	{
+		return;
+	}
+	
+	SetFrictionZero();
+	if (UCharacterMovementComponent* TempCharacterMovement = GetCharacterMovement())
+	{
+		FVector InstigatorLocation = InInstigator->GetActorLocation();
+		FVector Dir = (GetActorLocation() - InstigatorLocation).GetSafeNormal();
+		TempCharacterMovement->AddImpulse(Dir * Strength, true);
+		GetWorld()->GetTimerManager().SetTimer(PushAwayTimerHandle, FTimerDelegate::CreateUObject(this, &AGAS0Character::OnPushAwayDelayTimeReached), DelayTime, false);
+	}
+}
+
+void AGAS0Character::OnPushAwayDelayTimeReached()
+{
+	ResetFriction();
+}
+
+void AGAS0Character::Stun(float Duration)
+{
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		if (APlayerController* PC = GetPlayerController())
+		{
+			DisableInput(PC);
+			GetWorld()->GetTimerManager().SetTimer(StunTimerHandle, FTimerDelegate::CreateUObject(this, &AGAS0Character::OnStunDurationReached), Duration, false);
+		}
+	}
+}
+
+void AGAS0Character::OnStunDurationReached()
+{
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		if (APlayerController* PC = GetPlayerController())
+		{
+			EnableInput(PC);
+		}
+	}
+}
+
 void AGAS0Character::TryBindPendingSkills()
 {
 	if (InputComponent && IsLocallyControlled() && PendingBindings.Num() > 0)
@@ -334,5 +405,27 @@ void AGAS0Character::TryBindPendingSkills()
 			// Clear pending bindings after they are successfully bound to avoid duplicate bindings
 			PendingBindings.Empty();
 		}
+	}
+}
+
+void AGAS0Character::OnSkillActionStarted(TSubclassOf<UGameplayAbility> AbilityClass)
+{
+	if (AbilitySystemComponent && AbilityClass)
+	{
+		AbilitySystemComponent->TryActivateAbilityByClass(AbilityClass);
+	}
+}
+
+void AGAS0Character::UpdateCameraLockState(bool bLock)
+{
+	bUseControllerRotationYaw = bLock;
+	if (CameraBoom)
+	{
+		CameraBoom->bUsePawnControlRotation	= !bLock;
+	}
+	
+	if (UCharacterMovementComponent* CharacterMovementComponent = GetCharacterMovement())
+	{
+		CharacterMovementComponent->bOrientRotationToMovement = !bLock;
 	}
 }

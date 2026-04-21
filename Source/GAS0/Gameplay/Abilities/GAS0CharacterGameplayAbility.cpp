@@ -3,9 +3,9 @@
 #include "GAS0CharacterGameplayAbility.h"
 
 #include "GAS0AbilitySystemComponent.h"
-#include "Gameplay/Character/GAS0Character.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Animation/AnimMontage.h"
+#include "Gameplay/Character/GAS0Character.h"
 
 UGAS0CharacterGameplayAbility::UGAS0CharacterGameplayAbility()
 {
@@ -188,7 +188,7 @@ void UGAS0CharacterGameplayAbility::OnMainUICreated()
 
 void UGAS0CharacterGameplayAbility::HandleFireMontageEnded(bool bWasCancelled)
 {
-    if (!IsActive())
+    if (!IsActive() || !RoleSkillConfig->bShouldEndAbilityOnFireMontageCompleted)
     {
         return;
     }

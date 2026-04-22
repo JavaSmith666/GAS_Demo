@@ -16,13 +16,4 @@ class UGAS0AbilitySystemComponent : public UAbilitySystemComponent
 
 public:
 	UGAS0AbilitySystemComponent();
-	
-	UFUNCTION(BlueprintCallable, Category = "GAS0|Abilities")
-	void GAS0ApplyGameplayEffectToTarget(TSubclassOf<UGameplayEffect> EffectClass, UAbilitySystemComponent* TargetASC, float Level = 1.0f);
-
-protected:
-	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_ApplyGameplayEffectToTarget(TSubclassOf<UGameplayEffect> EffectClass, UAbilitySystemComponent* TargetASC, float Level);
-	
-	void ExecuteApplyGameplayEffectToTarget(TSubclassOf<UGameplayEffect> EffectClass, UAbilitySystemComponent* TargetASC, float Level);
 };

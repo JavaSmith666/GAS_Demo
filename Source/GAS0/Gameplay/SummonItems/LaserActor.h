@@ -40,4 +40,10 @@ public:
 	
 	UPROPERTY(Transient)
 	AGAS0Character* CurrentHitCharacter = nullptr;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float ForwardImpulse = 200.f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float ResetFrictionDelayTime = 1.f;
 };

@@ -54,7 +54,7 @@ class UDashConfig : public USkillConfig
 	
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	float ForwardImpulse = 0.f;
+	float ForwardImpulse = 1000.f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GameplayEffect")
 	TSubclassOf<UGameplayEffect> DashDamageEffect;

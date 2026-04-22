@@ -63,6 +63,7 @@ void ALaserActor::Tick(float DeltaTime)
 					}
 				}
 				
+				HitCharacter->PushAway(OwnerCharacter, ForwardImpulse, ResetFrictionDelayTime);
 				return;
 			}
 		}

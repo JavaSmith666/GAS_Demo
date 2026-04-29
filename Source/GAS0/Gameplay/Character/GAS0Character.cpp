@@ -362,19 +362,12 @@ void AGAS0Character::ResetFriction()
 	}
 }
 
-void AGAS0Character::PushAway(AGAS0Character* InInstigator, float Strength, float DelayTime)
+void AGAS0Character::PushAway(const FVector& Dir, float Strength, float DelayTime)
 {
-	if (!InInstigator)
-	{
-		return;
-	}
-	
 	SetFrictionZero();
 	if (UCharacterMovementComponent* TempCharacterMovement = GetCharacterMovement())
 	{
-		FVector InstigatorLocation = InInstigator->GetActorLocation();
-		FVector Dir = (GetActorLocation() - InstigatorLocation).GetSafeNormal();
-		TempCharacterMovement->AddImpulse(Dir * Strength, true);
+		TempCharacterMovement->AddImpulse(Dir.GetSafeNormal() * Strength, true);
 		GetWorld()->GetTimerManager().SetTimer(PushAwayTimerHandle, FTimerDelegate::CreateUObject(this, &AGAS0Character::OnPushAwayDelayTimeReached), DelayTime, false);
 	}
 }

@@ -32,6 +32,7 @@ void AGroundBlastActor::ConfirmHoldingAbility(TArray<AActor*>& FilterActors, FVe
 	
 	FilterActors.Reset();
 	GetPlayerLookAtPoint(EffectLocation);
+	CacheViewPoint = EffectLocation;
 	
 	TArray<FOverlapResult> OverlapResults;
 	FCollisionQueryParams CollisionParams;
@@ -57,6 +58,30 @@ void AGroundBlastActor::ConfirmHoldingAbility(TArray<AActor*>& FilterActors, FVe
 		}
 		
 		FilterActors.AddUnique(HitCharacter);
+	}
+}
+
+void AGroundBlastActor::ApplyEffectsToFilterActors(const TArray<AActor*>& FilterActors)
+{
+	Super::ApplyEffectsToFilterActors(FilterActors);
+	
+	if (!OwnerCharacter)
+	{
+		return;
+	}
+	
+	for (AActor* Actor : FilterActors)
+	{
+		AGAS0Character* FilterCharacter = Cast<AGAS0Character>(Actor);
+		if (!FilterCharacter)
+		{
+			continue;
+		}
+		
+		FVector HorizontalDir = FilterCharacter->GetActorLocation() - CacheViewPoint;
+		HorizontalDir.Z = 0.f;;
+		FVector ImpulseDir = (HorizontalDir + ImpulseUpVector).GetSafeNormal();
+		FilterCharacter->PushAway(ImpulseDir, ImpulseValue, 1.f);
 	}
 }
 

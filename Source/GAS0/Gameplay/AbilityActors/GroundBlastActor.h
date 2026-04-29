@@ -24,6 +24,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	
 	virtual void ConfirmHoldingAbility(TArray<AActor*>& FilterActors, FVector& EffectLocation) override;
+	
+	virtual void ApplyEffectsToFilterActors(const TArray<AActor*>& FilterActors) override;
 
 	bool GetPlayerLookAtPoint(FVector& Out_LookAtPoint);
 	
@@ -33,7 +35,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GroundSelect")
 	float LineTracemaxDistance = 10000.f;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ImpulseDir")
+	float ImpulseValue = 1000.f;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ImpulseDir")
+	FVector ImpulseUpVector = FVector::UpVector;
+	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Component")
 	UDecalComponent* DecalComponent = nullptr;
+	
+	FVector CacheViewPoint = FVector::ZeroVector;
 };

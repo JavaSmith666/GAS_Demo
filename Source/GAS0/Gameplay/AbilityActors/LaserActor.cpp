@@ -35,8 +35,8 @@ void ALaserActor::Tick(float DeltaTime)
 		}
 		
 		const FVector StartLocation = OwnerCharacter->LaserPoint->GetComponentLocation();
-		const FVector Dir = OwnerCharacter->GetActorForwardVector();
-		const FVector EndLocation = StartLocation + Dir * LaserTraceMaxDistance;
+		const FVector ForwardDir = OwnerCharacter->GetActorForwardVector();
+		const FVector EndLocation = StartLocation + ForwardDir * LaserTraceMaxDistance;
 		
 		FHitResult HitResult;
 		TArray<AActor*> ActorsToIgnore;
@@ -64,7 +64,8 @@ void ALaserActor::Tick(float DeltaTime)
 					}
 				}
 				
-				HitCharacter->PushAway(OwnerCharacter, ForwardImpulse, ResetFrictionDelayTime);
+				FVector Dir = (HitCharacter->GetActorLocation() - OwnerCharacter->GetActorLocation()).GetSafeNormal();
+				HitCharacter->PushAway(Dir, ForwardImpulse, ResetFrictionDelayTime);
 				return;
 			}
 		}

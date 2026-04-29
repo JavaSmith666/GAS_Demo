@@ -241,7 +241,7 @@ public:
 	void ResetFriction();
 	
 	UFUNCTION(BlueprintCallable, Category="Movement")
-	void PushAway(AGAS0Character* InInstigator, float Strength, float DelayTime = 0.f);
+	void PushAway(const FVector& Dir, float Strength, float DelayTime = 0.f);
 	
 	void OnPushAwayDelayTimeReached();
 	

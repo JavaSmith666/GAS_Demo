@@ -15,7 +15,7 @@ class UChaGA_HealthRegen : public UGAS0CharacterGameplayAbility
 	GENERATED_BODY()
 	
 protected:
-	virtual void OnGAS0CharacterGameplayAbilityActivated(
+	virtual bool OnGAS0CharacterGameplayAbilityActivated(
 		const FGameplayAbilitySpecHandle Handle,
 		const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo,

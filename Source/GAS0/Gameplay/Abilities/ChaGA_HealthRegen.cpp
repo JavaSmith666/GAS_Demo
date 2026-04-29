@@ -4,12 +4,11 @@
 #include "GAS0AbilitySystemComponent.h"
 #include "Gameplay/Character/GAS0Character.h"
 
-void UChaGA_HealthRegen::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbilitySpecHandle Handle,
+bool UChaGA_HealthRegen::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
-	Super::OnGAS0CharacterGameplayAbilityActivated(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-	
+	bool res = Super::OnGAS0CharacterGameplayAbilityActivated(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 	if (AGAS0Character* Character = Cast<AGAS0Character>(ActorInfo->AvatarActor.Get()))
 	{
 		if (Character->GetNetMode() < NM_Client)
@@ -25,6 +24,8 @@ void UChaGA_HealthRegen::OnGAS0CharacterGameplayAbilityActivated(const FGameplay
 			}
 		}
 	}
+	
+	return res;
 }
 
 bool UChaGA_HealthRegen::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,

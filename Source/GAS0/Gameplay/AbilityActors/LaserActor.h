@@ -22,12 +22,12 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 	
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
+	
 	void ClearCurrentHitCharacterDamageEffect();
-
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
+	
+	void SetLaserActive(bool bNewLaserActive) { bLaserActive = bNewLaserActive; }
+	
 public:	
 	UPROPERTY(EditAnywhere)
 	float LaserTraceMaxDistance = 10000.f;
@@ -46,4 +46,11 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	float ResetFrictionDelayTime = 1.f;
+	
+protected:
+	UPROPERTY(ReplicatedUsing=OnRep_LaserActive)
+	bool bLaserActive = true;
+	
+	UFUNCTION()
+	void OnRep_LaserActive();
 };

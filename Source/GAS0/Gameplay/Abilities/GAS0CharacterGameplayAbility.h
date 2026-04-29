@@ -61,7 +61,7 @@ public:
     void SetRoleSkillConfig(USkillConfig* InConfig) { RoleSkillConfig = InConfig; }
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    UMaterialInstance* AbilityMaterialInstance = nullptr;
+    TSoftObjectPtr<UMaterialInstance> AbilityMaterialInstance;
     
     UFUNCTION(BlueprintCallable)
     FGameplayAbilityInfo GetAbilityInfo() const;
@@ -71,16 +71,20 @@ public:
     
     UFUNCTION(BlueprintImplementableEvent)
     void StartCD();
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability|Animation")
+    TSoftObjectPtr<UAnimMontage> FireMontage;
+    
+    virtual bool PlayFireMontage();
 
 protected:
-
     virtual void ActivateAbility(
         const FGameplayAbilitySpecHandle Handle,
         const FGameplayAbilityActorInfo* ActorInfo,
         const FGameplayAbilityActivationInfo ActivationInfo,
         const FGameplayEventData* TriggerEventData) override;
     
-    virtual void OnGAS0CharacterGameplayAbilityActivated(
+    virtual bool OnGAS0CharacterGameplayAbilityActivated(
         const FGameplayAbilitySpecHandle Handle,
         const FGameplayAbilityActorInfo* ActorInfo,
         const FGameplayAbilityActivationInfo ActivationInfo,
@@ -99,9 +103,6 @@ protected:
         const FGameplayAbilityActivationInfo ActivationInfo,
         bool bReplicateEndAbility,
         bool bWasCancelled);
-
-    /** Plays fire montage and binds end callbacks. Override for custom play behavior. */
-    virtual bool PlayFireMontage();
 
     UFUNCTION()
     void OnFireMontageCompleted();
@@ -129,6 +130,9 @@ protected:
     
     UPROPERTY(Transient)
     AGAS0Character* OwnerCharacter = nullptr;
+    
+    UPROPERTY(Transient)
+    APlayerController* OwnerPlayerController = nullptr;
     
 private:
     void HandleFireMontageEnded(bool bWasCancelled);

@@ -5,7 +5,7 @@
 #include "GAS0AbilitySystemComponent.h"
 #include "Components/ArrowComponent.h"
 #include "Gameplay/Character/GAS0Character.h"
-#include "Gameplay/SummonItems/LaserActor.h"
+#include "Gameplay/AbilityActors///LaserActor.h"
 
 void UChaGA_Laser::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
@@ -36,20 +36,21 @@ void UChaGA_Laser::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, con
 			SpawnedLaserActor->AttachToComponent(LaserPoint, FAttachmentTransformRules::SnapToTargetIncludingScale);
 			SpawnedLaserActor->SetActorHiddenInGame(true);
 			SpawnedLaserActor->SetActorTickEnabled(false);
+			SpawnedLaserActor->SetLaserActive(false);
 		}
 	}
 }
 
-void UChaGA_Laser::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbilitySpecHandle Handle,
+bool UChaGA_Laser::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbilitySpecHandle Handle,
                                                            const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
                                                            const FGameplayEventData* TriggerEventData)
 {	
-	Super::OnGAS0CharacterGameplayAbilityActivated(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+	bool res = Super::OnGAS0CharacterGameplayAbilityActivated(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 	
 	ULaserConfig* LaserConfig = Cast<ULaserConfig>(RoleSkillConfig);
 	if (!LaserConfig || !OwnerCharacter)
 	{
-		return;
+		return res;
 	}
 	
 	if (UGAS0AbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent())
@@ -63,6 +64,7 @@ void UChaGA_Laser::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbilit
 		{
 			SpawnedLaserActor->SetActorHiddenInGame(false);
 			SpawnedLaserActor->SetActorTickEnabled(true);
+			SpawnedLaserActor->SetLaserActive(true);
 		}
 	}
 	
@@ -70,13 +72,15 @@ void UChaGA_Laser::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbilit
 	{
 		OwnerCharacter->UpdateCameraLockState(true);
 	}
+	
+	return res;
 }
 
 void UChaGA_Laser::PreGAS0CharacterGameplayAbilityEnded(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
 	bool bReplicateEndAbility, bool bWasCancelled)
 {
-	if (APlayerController* PC = OwnerCharacter->GetPlayerController())
+	if (APlayerController* PC = OwnerCharacter ? OwnerCharacter->GetPlayerController() : nullptr)
 	{
 		OwnerCharacter->UpdateCameraLockState(false);
 	}
@@ -98,6 +102,7 @@ void UChaGA_Laser::PreGAS0CharacterGameplayAbilityEnded(const FGameplayAbilitySp
 		{
 			SpawnedLaserActor->SetActorHiddenInGame(true);
 			SpawnedLaserActor->SetActorTickEnabled(false);
+			SpawnedLaserActor->SetLaserActive(false);
 			SpawnedLaserActor->ClearCurrentHitCharacterDamageEffect();
 		}
 	}

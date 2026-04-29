@@ -86,13 +86,23 @@ void AGAS0Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		// Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AGAS0Character::Look);
 
-		// Try to bind any skills that might have loaded before this was called
+		InitializeCharacterGlobalConfig();
 		TryBindPendingSkills();
-		BindCancelAction();
+		BindOtherActions();
 	}
 	else
 	{
 		UE_LOG(LogGAS0, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
+	}
+}
+
+void AGAS0Character::InitializeCharacterGlobalConfig()
+{
+	const UGAS0CharacterSettings* Settings = GetDefault<UGAS0CharacterSettings>();
+	if (!GAS0CharacterGlobalConfig && Settings && !Settings->CharacterGlobalConfig.IsNull())
+	{
+		UGAS0CharacterGlobalConfig* CharacterGlobalConfig = Settings->CharacterGlobalConfig.LoadSynchronous();
+		GAS0CharacterGlobalConfig = CharacterGlobalConfig;
 	}
 }
 
@@ -185,6 +195,8 @@ void AGAS0Character::BeginPlay()
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetMPAttribute()).AddUObject(this, &AGAS0Character::OnMPAttributeChanged);
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetStrengthAttribute()).AddUObject(this, &AGAS0Character::OnStrengthAttributeChanged);
 	}
+	
+	InitializeCharacterGlobalConfig();
 }
 
 void AGAS0Character::OnSkillConfigsLoaded()
@@ -214,6 +226,7 @@ void AGAS0Character::OnSkillConfigsLoaded()
 				{
 					FPendingAbilityBinding Binding;
 					Binding.AbilityClass = AbilityClass;
+					Binding.AbilityTags = Entry.AbilityTags;
 					Binding.ActivateAction = Action;
 					PendingBindings.Add(Binding);
 				}	
@@ -285,20 +298,20 @@ void AGAS0Character::InitializeSkillDataFromDataTable()
 	}
 }
 
-void AGAS0Character::BindCancelAction()
+void AGAS0Character::BindOtherActions()
 {
-	if (InputComponent && IsLocallyControlled())
+	if (InputComponent && IsLocallyControlled() && GAS0CharacterGlobalConfig)
 	{
 		if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(InputComponent))
 		{
-			const UGAS0CharacterSettings* Settings = GetDefault<UGAS0CharacterSettings>();
-			if (Settings && !Settings->CharacterGlobalConfig.IsNull())
+			if (GAS0CharacterGlobalConfig->CancelAbilityAction)
 			{
-				UGAS0CharacterGlobalConfig* CharacterGlobalConfig = Settings->CharacterGlobalConfig.LoadSynchronous();
-				if (CharacterGlobalConfig && CharacterGlobalConfig->CancelAbilityAction)
-				{
-					EIC->BindAction(CharacterGlobalConfig->CancelAbilityAction, ETriggerEvent::Started, this, &AGAS0Character::OnCancelActionBound);
-				}
+				EIC->BindAction(GAS0CharacterGlobalConfig->CancelAbilityAction, ETriggerEvent::Started, this, &AGAS0Character::OnCancelActionBound);	
+			}
+					
+			if (GAS0CharacterGlobalConfig->ConfirmSkillAbilityAction)
+			{
+				EIC->BindAction(GAS0CharacterGlobalConfig->ConfirmSkillAbilityAction, ETriggerEvent::Started, this, &AGAS0Character::OnConfirmSkillActionBound);	
 			}
 		}
 	}
@@ -310,6 +323,11 @@ void AGAS0Character::OnCancelActionBound()
 	{
 		AbilitySystemComponent->CancelAllAbilities();
 	}
+}
+
+void AGAS0Character::OnConfirmSkillActionBound()
+{
+	OnSkillConfirmed.ExecuteIfBound();
 }
 
 void AGAS0Character::OnHPAttributeChanged(const FOnAttributeChangeData& Data)
@@ -399,7 +417,7 @@ void AGAS0Character::TryBindPendingSkills()
 			{
 				if (Binding.ActivateAction && Binding.AbilityClass)
 				{
-					EIC->BindAction(Binding.ActivateAction, ETriggerEvent::Started, this, &AGAS0Character::OnSkillActionStarted, Binding.AbilityClass);
+					EIC->BindAction(Binding.ActivateAction, ETriggerEvent::Started, this, &AGAS0Character::OnSkillActionStarted, Binding.AbilityTags);
 				}
 			}
 			// Clear pending bindings after they are successfully bound to avoid duplicate bindings
@@ -408,20 +426,22 @@ void AGAS0Character::TryBindPendingSkills()
 	}
 }
 
-void AGAS0Character::OnSkillActionStarted(TSubclassOf<UGameplayAbility> AbilityClass)
+void AGAS0Character::OnSkillActionStarted(FGameplayTagContainer AbilityTags)
 {
-	if (AbilitySystemComponent && AbilityClass)
+	if (AbilitySystemComponent)
 	{
-		AbilitySystemComponent->TryActivateAbilityByClass(AbilityClass);
+		AbilitySystemComponent->TryActivateAbilitiesByTag(AbilityTags);
 	}
 }
 
 void AGAS0Character::UpdateCameraLockState(bool bLock)
 {
 	bUseControllerRotationYaw = bLock;
-	if (CameraBoom)
+	if (CameraBoom && GAS0CharacterGlobalConfig)
 	{
 		CameraBoom->bUsePawnControlRotation	= !bLock;
+		CameraBoom->SetRelativeLocation(bLock ? GAS0CharacterGlobalConfig->LockCameraRelativeLocation : FVector::ZeroVector);
+		CameraBoom->SetRelativeRotation(bLock ? GAS0CharacterGlobalConfig->LockCameraRelativeRotation : FRotator::ZeroRotator);
 	}
 	
 	if (UCharacterMovementComponent* CharacterMovementComponent = GetCharacterMovement())

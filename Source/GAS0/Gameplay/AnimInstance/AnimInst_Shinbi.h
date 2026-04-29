@@ -48,9 +48,6 @@ protected:
 	TSoftClassPtr<UGameplayEffect> MeleeDamageEffect;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
-	float SweepMaxDistance = 10000.f;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	float AttackCapsuleRadius  = 80.0f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")

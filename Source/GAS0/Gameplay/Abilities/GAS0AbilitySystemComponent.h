@@ -16,4 +16,7 @@ class UGAS0AbilitySystemComponent : public UAbilitySystemComponent
 
 public:
 	UGAS0AbilitySystemComponent();
+	
+	UFUNCTION(Server, UnReliable, WithValidation)
+	void ServerConfirmHoldingAbility(const FGameplayAbilitySpecHandle& Handle);
 };

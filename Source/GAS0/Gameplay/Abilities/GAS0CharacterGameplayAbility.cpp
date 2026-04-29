@@ -9,7 +9,6 @@
 
 UGAS0CharacterGameplayAbility::UGAS0CharacterGameplayAbility()
 {
-    // Use a sensible default instancing policy for character abilities. Change as needed.
     InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 }
 
@@ -22,10 +21,11 @@ void UGAS0CharacterGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInf
 	{
 		RoleSkillConfig = Config;
 	    AbilityIndex = Config->AbilityIndex;
-	    if (AGAS0Character* Character = Cast<AGAS0Character>(ActorInfo->OwnerActor.Get()))
+	    if (AGAS0Character* Character = Cast<AGAS0Character>(ActorInfo->AvatarActor.Get()))
 	    {
 	        OwnerCharacter = Character;
-	        if (OwnerCharacter->bHasMainUICreated)
+	        OwnerPlayerController = Cast<APlayerController>(OwnerCharacter->GetController());
+	        if (Character->bHasMainUICreated)
 	        {
 	            OnMainUICreated();
 	        }
@@ -66,7 +66,8 @@ FGameplayAbilityInfo UGAS0CharacterGameplayAbility::GetAbilityInfo() const
         CostType = ECostType::Strength;
     }
     
-    return FGameplayAbilityInfo(RoleSkillConfig->AbilityIndex, CD, CostType, CostValue, AbilityMaterialInstance);
+    UMaterialInstance* MI = AbilityMaterialInstance.IsNull() ? nullptr : AbilityMaterialInstance.LoadSynchronous();
+    return FGameplayAbilityInfo(RoleSkillConfig->AbilityIndex, CD, CostType, CostValue, MI);
 }
 
 void UGAS0CharacterGameplayAbility::ActivateAbility(
@@ -77,54 +78,51 @@ void UGAS0CharacterGameplayAbility::ActivateAbility(
 {
     Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
     
-    OnGAS0CharacterGameplayAbilityActivated(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+    if (!OnGAS0CharacterGameplayAbilityActivated(Handle, ActorInfo, ActivationInfo, TriggerEventData) && HasAuthority(&ActivationInfo))
+    {
+        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+    }
 }
 
-void UGAS0CharacterGameplayAbility::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbilitySpecHandle Handle,
+bool UGAS0CharacterGameplayAbility::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbilitySpecHandle Handle,
     const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
     const FGameplayEventData* TriggerEventData)
 {
-    // Fallback if RoleSkillConfig is still null (e.g. for non-instanced abilities or if logic missed it)
-    if (!RoleSkillConfig)
-    {
-        if (FGameplayAbilitySpec* Spec = GetCurrentAbilitySpec())
-        {
-            RoleSkillConfig = Cast<USkillConfig>(Spec->SourceObject);
-        }
-    }
-    
     if (!ActorInfo || !RoleSkillConfig || !OwnerCharacter)
     {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
+        return false;
     }
-
-    if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+    
+    if (OwnerCharacter->GetNetMode() < NM_Client)
     {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
+        if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+        {
+            return false;
+        }   
     }
 
     if (!PlayFireMontage())
     {
-        EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-        return;
+        return false;
     }
     
     if (OwnerCharacter->GetNetMode() != NM_DedicatedServer)
     {
         StartCD();
     }
+    
+    return true;
 }
 
 bool UGAS0CharacterGameplayAbility::PlayFireMontage()
 {
-    if (RoleSkillConfig->FireMontage == nullptr)
+    UAnimMontage* Montage = FireMontage.IsNull() ? nullptr : FireMontage.LoadSynchronous();
+    if (!Montage)
     {
         return false;
     }
     
-    ActiveMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, RoleSkillConfig->FireMontage);
+    ActiveMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, Montage);
     if (!ActiveMontageTask)
     {
         return false;
@@ -146,9 +144,11 @@ void UGAS0CharacterGameplayAbility::EndAbility(
     bool bReplicateEndAbility,
     bool bWasCancelled)
 {
-    PreGAS0CharacterGameplayAbilityEnded(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
-    
-    Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+    if (IsActive())
+    {
+        PreGAS0CharacterGameplayAbilityEnded(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+        Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);   
+    }
 }
 
 void UGAS0CharacterGameplayAbility::PreGAS0CharacterGameplayAbilityEnded(const FGameplayAbilitySpecHandle Handle,
@@ -188,7 +188,7 @@ void UGAS0CharacterGameplayAbility::OnMainUICreated()
 
 void UGAS0CharacterGameplayAbility::HandleFireMontageEnded(bool bWasCancelled)
 {
-    if (!IsActive() || !RoleSkillConfig->bShouldEndAbilityOnFireMontageCompleted)
+    if (!IsActive())
     {
         return;
     }

@@ -14,7 +14,7 @@ class UChaGA_Melee : public UGAS0CharacterGameplayAbility
 {
     GENERATED_BODY()
 
-protected:
+public:
     virtual bool PlayFireMontage() override;
 };
 

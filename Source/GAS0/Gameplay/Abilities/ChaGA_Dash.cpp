@@ -5,12 +5,11 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Gameplay/Character/GAS0Character.h"
 
-void UChaGA_Dash::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbilitySpecHandle Handle,
+bool UChaGA_Dash::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbilitySpecHandle Handle,
                                                           const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
                                                           const FGameplayEventData* TriggerEventData)
 {
-	Super::OnGAS0CharacterGameplayAbilityActivated(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-	
+	bool res = Super::OnGAS0CharacterGameplayAbilityActivated(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 	if (OwnerCharacter)
 	{
 		OwnerCharacter->SetFrictionZero();
@@ -23,6 +22,8 @@ void UChaGA_Dash::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbility
 			}
 		}
 	}
+	
+	return res;
 }
 
 void UChaGA_Dash::PreGAS0CharacterGameplayAbilityEnded(const FGameplayAbilitySpecHandle Handle,

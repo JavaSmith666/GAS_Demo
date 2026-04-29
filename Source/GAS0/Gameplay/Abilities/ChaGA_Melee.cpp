@@ -5,7 +5,8 @@
 
 bool UChaGA_Melee::PlayFireMontage()
 {
-    if (!RoleSkillConfig || !RoleSkillConfig->FireMontage)
+    UAnimMontage* Montage = FireMontage.IsNull() ? nullptr : FireMontage.LoadSynchronous();
+    if (!RoleSkillConfig || !Montage)
     {
         return false;
     }
@@ -15,8 +16,8 @@ bool UChaGA_Melee::PlayFireMontage()
     FRandomStream RandomStream(Seed);
     const int32 SectionValue = RandomStream.RandRange(1, 2);
     const FName StartSection(*FString::FromInt(SectionValue));
-
-    ActiveMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, RoleSkillConfig->FireMontage, 1.0f, StartSection);
+    
+    ActiveMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(this, NAME_None, Montage, 1.0f, StartSection);
     if (!ActiveMontageTask)
     {
         return false;

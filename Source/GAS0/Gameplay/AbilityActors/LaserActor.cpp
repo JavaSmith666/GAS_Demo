@@ -1,29 +1,27 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Gameplay/SummonItems/LaserActor.h"
+#include "Gameplay/AbilityActors//LaserActor.h"
 #include "Gameplay/Abilities/GAS0AbilitySystemComponent.h"
 #include "AbilitySystemComponent.h"
 #include "Gameplay/Character/GAS0Character.h"
 #include "GameplayEffect.h"
 #include "Components/ArrowComponent.h"
-#include "Kismet/KismetSystemLibrary.h"
+#include "Net/UnrealNetwork.h"
 
-// Sets default values
 ALaserActor::ALaserActor()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = false;
 }
 
-// Called when the game starts or when spawned
-void ALaserActor::BeginPlay()
+void ALaserActor::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
-	Super::BeginPlay();
-	SetActorTickEnabled(false);
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(ALaserActor, bLaserActive);
 }
 
-// Called every frame
 void ALaserActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -45,7 +43,10 @@ void ALaserActor::Tick(float DeltaTime)
 		ActorsToIgnore.Add(this);
 		ActorsToIgnore.Add(OwnerCharacter);
 		
-		bool bHit = UKismetSystemLibrary::LineTraceSingle(this, StartLocation, EndLocation, UEngineTypes::ConvertToTraceType(ECC_Pawn), false, ActorsToIgnore, EDrawDebugTrace::None, HitResult, true);
+		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(OwnerCharacter);
+		
+		bool bHit = GetWorld()->LineTraceSingleByObjectType(HitResult, StartLocation, EndLocation, ECC_Pawn, QueryParams);
 		if (bHit && HitResult.GetActor())
 		{
 			if (AGAS0Character* HitCharacter = Cast<AGAS0Character>(HitResult.GetActor()))
@@ -57,7 +58,7 @@ void ALaserActor::Tick(float DeltaTime)
 					if (UAbilitySystemComponent* HitCharacterASC = HitCharacter->GetAbilitySystemComponent())
 					{
 						HitCharacterASC->AddLooseGameplayTag(LaserDamageOnGoingTag);
-						UClass* GEClass = LaserDamageEffect.LoadSynchronous();
+						UClass* GEClass = LaserDamageEffect.IsNull() ? nullptr : LaserDamageEffect.LoadSynchronous();
 						const UGameplayEffect* TempGE = GEClass ? GEClass->GetDefaultObject<UGameplayEffect>() : nullptr;
 						HitCharacterASC->ApplyGameplayEffectToSelf(TempGE, 1.f, HitCharacterASC->MakeEffectContext());
 					}
@@ -83,4 +84,9 @@ void ALaserActor::ClearCurrentHitCharacterDamageEffect()
 	}
 	
 	CurrentHitCharacter = nullptr;
+}
+
+void ALaserActor::OnRep_LaserActive()
+{
+	SetActorTickEnabled(bLaserActive);
 }

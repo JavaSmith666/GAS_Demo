@@ -17,15 +17,8 @@ class USkillConfig : public UDataAsset
 	GENERATED_BODY()
 
 public:
-	/** Montage played when this ability activates (for example, fire animation). */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability|Animation")
-	TObjectPtr<UAnimMontage> FireMontage;
-	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability|Info")
 	int32 AbilityIndex = -1;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	bool bShouldEndAbilityOnFireMontageCompleted = true;
 };
 
 UCLASS(BlueprintType)
@@ -74,5 +67,13 @@ public:
 	
 	UPROPERTY(editAnywhere, BlueprintReadOnly)
 	FGameplayTag LaserCostTag;
+};
+
+UCLASS(BlueprintType)
+class UGroundBlastConfig : public USkillConfig
+{
+	GENERATED_BODY()
+	
+public:
 };
 

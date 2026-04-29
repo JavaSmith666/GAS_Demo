@@ -1,6 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Gameplay/AnimInstance/AnimInst_Shinbi.h"
+
+#include "Engine/OverlapResult.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Gameplay/Abilities/GAS0AbilitySystemComponent.h"
 #include "Gameplay/Character/GAS0Character.h"
@@ -40,21 +42,28 @@ void UAnimInst_Shinbi::OnStartMontageNotify()
 	
 	FVector StartLocation = SkeletalMeshComp->GetBoneLocation(StartAttackBoneName);
 	FVector OwnerCharacterForwardVector = OwnerCharacter->GetActorForwardVector();
-	FVector EndLocation = StartLocation + OwnerCharacterForwardVector * SweepMaxDistance;
 	FCollisionShape CollisionShape = FCollisionShape::MakeCapsule(AttackCapsuleRadius, AttackCapsuleHalfHeight);
-	TArray<FHitResult> OutHits;
+	TArray<FOverlapResult> OutOverlaps;
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(OwnerCharacter);
-	GetWorld()->SweepMultiByChannel(OutHits, StartLocation, EndLocation, FQuat::Identity, ECC_Pawn, CollisionShape, QueryParams);
-	for (const FHitResult& HitResult : OutHits)
+	
+	TSet<AGAS0Character*> OverlappingCharacters;
+	GetWorld()->OverlapMultiByObjectType(OutOverlaps, StartLocation, FQuat::Identity, ECC_Pawn, CollisionShape, QueryParams);
+	for (const FOverlapResult& OverlapResult : OutOverlaps)
 	{
-		AActor* HitActor = HitResult.GetActor();
+		AActor* HitActor = OverlapResult.GetActor();
 		AGAS0Character* HitCharacter = Cast<AGAS0Character>(HitActor);
 		if (!HitCharacter)
 		{
 			continue;
 		}
 		
+		if (OverlappingCharacters.Contains(HitCharacter))
+		{
+			continue;
+		}
+		
+		OverlappingCharacters.Add(HitCharacter);
 		FVector SourceToTargetVector = HitActor->GetActorLocation() - OwnerCharacter->GetActorLocation();
 		if (OwnerCharacterForwardVector.Dot(SourceToTargetVector) <= 0.f)
 		{
@@ -63,7 +72,7 @@ void UAnimInst_Shinbi::OnStartMontageNotify()
 		
 		if (UGAS0AbilitySystemComponent* ASC = HitCharacter->GetAbilitySystemComponent())
 		{
-			UClass* GEClass = MeleeDamageEffect ? MeleeDamageEffect.LoadSynchronous() : nullptr;
+			UClass* GEClass = MeleeDamageEffect.IsNull() ? nullptr : MeleeDamageEffect.LoadSynchronous();
 			UGameplayEffect* DamageEffect = GEClass ? GEClass->GetDefaultObject<UGameplayEffect>() : nullptr;
 			ASC->ApplyGameplayEffectToSelf(DamageEffect, 1.f, ASC->MakeEffectContext());
 		}

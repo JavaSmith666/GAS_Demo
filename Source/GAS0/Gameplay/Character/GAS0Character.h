@@ -17,11 +17,13 @@ struct FInputActionValue;
 class UGAS0AbilitySystemComponent;
 class UGameplayAbility;
 class UArrowComponent;
+class UGAS0CharacterGlobalConfig;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHPChangeEvent, float, NewHP);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMPChangeEvent, float, NewMP);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStrengthChangeEvent, float, NewStrength);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMainUICreated);
+DECLARE_DELEGATE(FOnSkillConfirmed)
 
 USTRUCT(BlueprintType)
 struct FPendingAbilityBinding
@@ -30,6 +32,9 @@ struct FPendingAbilityBinding
 
 	UPROPERTY()
 	TSubclassOf<UGameplayAbility> AbilityClass;
+	
+	UPROPERTY()
+	FGameplayTagContainer AbilityTags;
 
 	UPROPERTY()
 	UInputAction* ActivateAction;
@@ -54,9 +59,17 @@ public:
 	/** Actor lifecycle */
 	virtual void BeginPlay() override;
 	
+	UGAS0CharacterGlobalConfig* GetGAS0CharacterGlobalConfig() const { return GAS0CharacterGlobalConfig; }
+	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	int32 CharacterID = -1;
+	
+	UPROPERTY(Transient)
+	UGAS0CharacterGlobalConfig* GAS0CharacterGlobalConfig = nullptr;
+	
+private:
+	void InitializeCharacterGlobalConfig();
 #pragma endregion Base
 	
 #pragma region State
@@ -139,6 +152,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Components")
     UArrowComponent* LaserPoint = nullptr;
 	
+	FOnSkillConfirmed OnSkillConfirmed;
+	
 protected:
 	/** Callback when async loading of DT entries completes */
 	void OnSkillConfigsLoaded();
@@ -156,11 +171,12 @@ private:
 	FSkillSlotEntry PendingDefaultSkill;
 	
 	void InitializeSkillDataFromDataTable();
-	void BindCancelAction();
+	void BindOtherActions();
 	void OnCancelActionBound();
+	void OnConfirmSkillActionBound();
 	
 	/** Generic handler for skill input actions */
-	void OnSkillActionStarted(TSubclassOf<UGameplayAbility> AbilityClass);
+	void OnSkillActionStarted(FGameplayTagContainer AbilityTags);
 
 	/** Attempts to bind any skills that were loaded but didn't have an InputComponent yet */
 	void TryBindPendingSkills();

@@ -8,23 +8,20 @@ class USkillConfig;
 class UInputAction;
 class UGameplayAbility;
 
-/**
- * Encapsulates skill-specific data used within the character skill row.
- */
 USTRUCT(BlueprintType)
 struct FSkillSlotEntry
 {
 	GENERATED_BODY()
 
-	/** Optional readable display name for UI/debug. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FText SkillDisplayName;
 
-	/** Ability class driven by this skill config. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSoftClassPtr<UGameplayAbility> AbilityClass;
 	
-	/** The configuration data asset for this skill. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FGameplayTagContainer AbilityTags;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSoftObjectPtr<USkillConfig> SkillConfig;
 	
@@ -32,23 +29,17 @@ struct FSkillSlotEntry
 	TSoftObjectPtr<UInputAction> ActivateAction;
 };
 
-/**
- * One row in character skill slot DataTable.
- * Stores character name and three slot skill entries.
- */
 USTRUCT(BlueprintType)
 struct FCharacterSkillSlotsRow : public FTableRowBase
 {
 	GENERATED_BODY()
 
-	/** Character identifier/name for this row. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FText CharacterName;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	FSkillSlotEntry DefaultSkill;
 
-	/** Skill entry bound to slot 0. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TArray<FSkillSlotEntry> SlotSkills;
 };

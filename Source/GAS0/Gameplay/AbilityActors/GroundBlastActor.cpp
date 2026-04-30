@@ -79,7 +79,7 @@ void AGroundBlastActor::ApplyEffectsToFilterActors(const TArray<AActor*>& Filter
 		}
 		
 		FVector HorizontalDir = FilterCharacter->GetActorLocation() - CacheViewPoint;
-		HorizontalDir.Z = 0.f;;
+		HorizontalDir.Z = 0.f;
 		FVector ImpulseDir = (HorizontalDir + ImpulseUpVector).GetSafeNormal();
 		FilterCharacter->PushAway(ImpulseDir, ImpulseValue, 1.f);
 	}

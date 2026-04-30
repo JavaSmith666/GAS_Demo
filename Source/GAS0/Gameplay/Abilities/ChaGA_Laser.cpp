@@ -1,11 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Gameplay/Abilities/ChaGA_Laser.h"
-
 #include "GAS0AbilitySystemComponent.h"
 #include "Components/ArrowComponent.h"
 #include "Gameplay/Character/GAS0Character.h"
 #include "Gameplay/AbilityActors///LaserActor.h"
+#include "Gameplay/AbilityActors/SummonItemBase.h"
 
 void UChaGA_Laser::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
@@ -30,7 +30,7 @@ void UChaGA_Laser::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, con
 			return;
 		}
 		
-		SpawnedLaserActor = GetWorld()->SpawnActor<ALaserActor>(LaserConfig->LaserActorClass, FVector(), FRotator(), SpawnParams);
+		SpawnedLaserActor = GetWorld()->SpawnActor<ALaserActor>(LaserConfig->SummonItemClass, FVector(), FRotator(), SpawnParams);
 		if (SpawnedLaserActor)
 		{
 			SpawnedLaserActor->AttachToComponent(LaserPoint, FAttachmentTransformRules::SnapToTargetIncludingScale);

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "SummonItemBase.h"
 #include "GameFramework/Actor.h"
 #include "LaserActor.generated.h"
 
@@ -11,7 +12,7 @@ class AGAS0Character;
 class UGameplayEffect;
 
 UCLASS()
-class GAS0_API ALaserActor : public AActor
+class ALaserActor : public ASummonItemBase
 {
 	GENERATED_BODY()
 	

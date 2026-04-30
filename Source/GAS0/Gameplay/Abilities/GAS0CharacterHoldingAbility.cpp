@@ -12,14 +12,13 @@ void UGAS0CharacterHoldingAbility::OnGiveAbility(const FGameplayAbilityActorInfo
 {
 	Super::OnGiveAbility(ActorInfo, Spec);
 	
-	if (OwnerCharacter->GetNetMode() < NM_Client)
+	if (RoleSkillConfig && OwnerCharacter->GetNetMode() < NM_Client)
 	{
-		TSubclassOf<ASummonItemBase> Class = SummonItemClass.IsNull() ? nullptr : SummonItemClass.LoadSynchronous();
 		FActorSpawnParameters SpawnParams;
 		SpawnParams.Owner = OwnerCharacter;
 		SpawnParams.Instigator = OwnerCharacter;
 		ASummonItemBase* SpawnedActor = GetWorld()->SpawnActor<ASummonItemBase>(
-			Class,
+			RoleSkillConfig->SummonItemClass,
 			FVector::ZeroVector,
 			FRotator::ZeroRotator,
 			SpawnParams

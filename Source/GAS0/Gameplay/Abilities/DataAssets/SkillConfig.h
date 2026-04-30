@@ -2,11 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "Abilities/GameplayAbilityTypes.h"
 #include "Engine/DataAsset.h"
 #include "SkillConfig.generated.h"
 
 class UGameplayEffect;
-class ALaserActor;
+class ASummonItemBase;
 
 /**
  * Base data asset for all skill configurations.
@@ -19,6 +20,9 @@ class USkillConfig : public UDataAsset
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability|Info")
 	int32 AbilityIndex = -1;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability|Animation")
+	TSubclassOf<ASummonItemBase> SummonItemClass;
 };
 
 UCLASS(BlueprintType)
@@ -63,9 +67,6 @@ public:
 	TSubclassOf<UGameplayEffect> LaserDamageEffect;
 	
 	UPROPERTY(editAnywhere, BlueprintReadOnly)
-	TSubclassOf<ALaserActor> LaserActorClass;
-	
-	UPROPERTY(editAnywhere, BlueprintReadOnly)
 	FGameplayTag LaserCostTag;
 };
 
@@ -77,3 +78,18 @@ class UGroundBlastConfig : public USkillConfig
 public:
 };
 
+UCLASS(BlueprintType)
+class UFireBlastConfig : public USkillConfig
+{
+	GENERATED_BODY()
+	
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FGameplayTag FireBlastPullEventTag;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	FGameplayTag FireBlastPushEventTag;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSubclassOf<UGameplayEffect> FireBlastDamageEffect;
+};

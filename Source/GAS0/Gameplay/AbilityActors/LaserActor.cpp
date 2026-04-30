@@ -28,7 +28,6 @@ void ALaserActor::Tick(float DeltaTime)
 	
 	if (GetNetMode() < NM_Client)
 	{
-		AGAS0Character* OwnerCharacter = Cast<AGAS0Character>(GetOwner());
 		if (!OwnerCharacter || !OwnerCharacter->LaserPoint)
 		{
 			return;

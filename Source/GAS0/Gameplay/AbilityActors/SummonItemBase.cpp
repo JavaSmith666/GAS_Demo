@@ -5,7 +5,6 @@
 #include "Gameplay/Character/GAS0Character.h"
 #include "Net/UnrealNetwork.h"
 #include "GameplayEffect.h"
-#include "Kismet/GameplayStatics.h"
 
 ASummonItemBase::ASummonItemBase()
 {

@@ -18,13 +18,11 @@ class UGAS0CharacterHoldingAbility : public UGAS0CharacterGameplayAbility
 	
 public:
 	virtual void OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
+	
 	void AuthConfirmHoldingAbility();
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability|Animation")
 	TSoftObjectPtr<UAnimMontage> HoldingMontage;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability|Animation")
-	TSoftClassPtr<ASummonItemBase> SummonItemClass;
 	
 	virtual bool PlayFireMontage() override;
 	

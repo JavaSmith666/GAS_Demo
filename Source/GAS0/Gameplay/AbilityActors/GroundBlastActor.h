@@ -35,10 +35,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GroundSelect")
 	float LineTracemaxDistance = 10000.f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ImpulseDir")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Impulse")
 	float ImpulseValue = 1000.f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ImpulseDir")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Impulse")
 	FVector ImpulseUpVector = FVector::UpVector;
 	
 protected:

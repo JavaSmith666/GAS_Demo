@@ -119,6 +119,13 @@ void UGAS0CharacterHoldingAbility::PreGAS0CharacterGameplayAbilityEnded(const FG
 		OwnerCharacter->OnSkillConfirmed.Unbind();
 	}
 	
+	if (SummonItem && SummonItem->GetNetMode() < NM_Client)
+	{
+		SummonItem->SetActorHiddenInGame(true);
+		SummonItem->SetActorTickEnabled(false);
+		SummonItem->SetActorActive(false);
+	}
+	
 	Super::PreGAS0CharacterGameplayAbilityEnded(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
@@ -179,13 +186,12 @@ void UGAS0CharacterHoldingAbility::OnHoldingMontageCancelled()
 
 void UGAS0CharacterHoldingAbility::OnSkillConfirmed()
 {
-	if (!PlayFireMontage())
+	if (!PlayFireMontage() || !OwnerCharacter)
 	{
 		return;
 	}
 	
-	StartCD();
-	
+	OwnerCharacter->StartCD(AbilityIndex);
 	if (OwnerCharacter->GetNetMode() == NM_Client)
 	{
 		if (UGAS0AbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent())

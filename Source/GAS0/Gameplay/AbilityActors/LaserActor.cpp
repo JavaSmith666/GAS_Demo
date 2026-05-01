@@ -50,7 +50,7 @@ void ALaserActor::Tick(float DeltaTime)
 		{
 			if (AGAS0Character* HitCharacter = Cast<AGAS0Character>(HitResult.GetActor()))
 			{
-				if (!HitCharacter->IsDead() && HitCharacter != CurrentHitCharacter)
+				if (!HitCharacter->IsDead() && HitCharacter != CurrentHitCharacter && HitCharacter->GetTeamID() != OwnerCharacter->GetTeamID())
 				{
 					ClearCurrentHitCharacterDamageEffect();
 					CurrentHitCharacter = HitCharacter;

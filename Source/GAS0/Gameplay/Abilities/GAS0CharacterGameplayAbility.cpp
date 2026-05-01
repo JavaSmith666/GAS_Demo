@@ -37,39 +37,6 @@ void UGAS0CharacterGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInf
 	}
 }
 
-FGameplayAbilityInfo UGAS0CharacterGameplayAbility::GetAbilityInfo() const
-{
-    UGameplayEffect* CooldownGE = GetCooldownGameplayEffect();
-    UGameplayEffect* CostGE = GetCostGameplayEffect();
-    if (!CooldownGE || !CostGE)
-    {
-        return FGameplayAbilityInfo();
-    }
-    
-    float CD = 0.f;
-    ECostType CostType = ECostType::Default;
-    float CostValue = 0.f;
-    CooldownGE->DurationMagnitude.GetStaticMagnitudeIfPossible(GetCurrentAbilitySpec()->Level, CD);
-    FGameplayModifierInfo ModifierInfo = CostGE->Modifiers[0];
-    ModifierInfo.ModifierMagnitude.GetStaticMagnitudeIfPossible(GetCurrentAbilitySpec()->Level, CostValue);
-    FString AttributeName = ModifierInfo.Attribute.AttributeName;
-    if (AttributeName == "HP")
-    {
-        CostType = ECostType::HP;
-    }
-    else if (AttributeName == "MP")
-    {
-        CostType = ECostType::MP;
-    }
-    else if (AttributeName == "Strength")
-    {
-        CostType = ECostType::Strength;
-    }
-    
-    UMaterialInstance* MI = AbilityMaterialInstance.IsNull() ? nullptr : AbilityMaterialInstance.LoadSynchronous();
-    return FGameplayAbilityInfo(RoleSkillConfig->AbilityIndex, CD, CostType, CostValue, MI);
-}
-
 void UGAS0CharacterGameplayAbility::ActivateAbility(
     const FGameplayAbilitySpecHandle Handle,
     const FGameplayAbilityActorInfo* ActorInfo,
@@ -108,7 +75,7 @@ bool UGAS0CharacterGameplayAbility::OnGAS0CharacterGameplayAbilityActivated(cons
     
     if (OwnerCharacter->GetNetMode() != NM_DedicatedServer)
     {
-        StartCD();
+        OwnerCharacter->StartCD(AbilityIndex);
     }
     
     return true;
@@ -182,7 +149,16 @@ void UGAS0CharacterGameplayAbility::OnMainUICreated()
 {
     if (OwnerCharacter)
     {
-        OwnerCharacter->InitSkillIcon(GetAbilityInfo());
+        UGameplayEffect* CooldownGE = GetCooldownGameplayEffect();
+        if (!CooldownGE)
+        {
+            return;
+        }
+    
+        float CD = 0.f;
+        CooldownGE->DurationMagnitude.GetStaticMagnitudeIfPossible(1, CD);
+        UMaterialInstance* MI = AbilityMaterialInstance.IsNull() ? nullptr : AbilityMaterialInstance.LoadSynchronous();
+        OwnerCharacter->InitSkillIcon(AbilityIndex, CD, MI);
     }
 }
 

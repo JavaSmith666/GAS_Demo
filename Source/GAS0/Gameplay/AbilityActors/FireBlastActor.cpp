@@ -27,7 +27,7 @@ void AFireBlastActor::ScanEnemies(TArray<AGAS0Character*>& Enemies)
 	for (const FOverlapResult& OverlapResult : OverlapResults)
 	{
 		AGAS0Character* HitCharacter = Cast<AGAS0Character>(OverlapResult.GetActor());
-		if (!HitCharacter || HitCharacter == OwnerCharacter)
+		if (!HitCharacter || HitCharacter == OwnerCharacter || HitCharacter->GetTeamID() == OwnerCharacter->GetTeamID() || HitCharacter->IsDead())
 		{
 			continue;
 		}

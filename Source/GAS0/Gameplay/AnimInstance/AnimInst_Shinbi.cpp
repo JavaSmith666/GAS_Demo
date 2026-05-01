@@ -63,6 +63,11 @@ void UAnimInst_Shinbi::OnStartMontageNotify()
 			continue;
 		}
 		
+		if (HitCharacter->GetTeamID() == OwnerCharacter->GetTeamID())
+		{
+			continue;
+		}
+		
 		OverlappingCharacters.Add(HitCharacter);
 		FVector SourceToTargetVector = HitActor->GetActorLocation() - OwnerCharacter->GetActorLocation();
 		if (OwnerCharacterForwardVector.Dot(SourceToTargetVector) <= 0.f)

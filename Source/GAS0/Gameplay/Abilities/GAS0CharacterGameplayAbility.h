@@ -12,36 +12,6 @@ class UAnimMontage;
 class UAbilityTask_PlayMontageAndWait;
 class AGAS0Character;
 
-UENUM(BlueprintType)
-enum class ECostType : uint8
-{
-    Default,
-    HP,
-    MP,
-    Strength
-};
-
-USTRUCT(BlueprintType)
-struct FGameplayAbilityInfo
-{
-    GENERATED_BODY()
-    
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AbilityInfo")
-    int32 AbilityIndex;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AbilityInfo")
-    float CD;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AbilityInfo")
-    ECostType CostType;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AbilityInfo")
-    float CostValue;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AbilityInfo")
-    UMaterialInstance* MI;
-    
-    FGameplayAbilityInfo() : AbilityIndex(-1), CD(0), CostType(ECostType::HP), CostValue(0.0f), MI(nullptr) {}
-    FGameplayAbilityInfo(int32 InAbilityIndex, float InCD, ECostType InCostType, float InCostValue, UMaterialInstance* InMI)
-        : AbilityIndex(InAbilityIndex), CD(InCD), CostType(InCostType), CostValue(InCostValue), MI(InMI) {}
-};
-
 /**
  * Minimal gameplay ability for GAS0 characters.
  * This class is intentionally small — extend it with ability logic as needed.
@@ -64,13 +34,7 @@ public:
     TSoftObjectPtr<UMaterialInstance> AbilityMaterialInstance;
     
     UFUNCTION(BlueprintCallable)
-    FGameplayAbilityInfo GetAbilityInfo() const;
-    
-    UFUNCTION(BlueprintCallable)
     int32 GetAbilityIndex() const { return AbilityIndex; }
-    
-    UFUNCTION(BlueprintImplementableEvent)
-    void StartCD();
     
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability|Animation")
     TSoftObjectPtr<UAnimMontage> FireMontage;

@@ -18,7 +18,7 @@ class USkillConfig : public UDataAsset
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability|Info")
+	UPROPERTY(BlueprintReadOnly, Category = "Ability|Info")
 	int32 AbilityIndex = -1;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ability|Animation")

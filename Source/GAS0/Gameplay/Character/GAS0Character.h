@@ -25,6 +25,14 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStrengthChangeEvent, float, NewSt
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMainUICreated);
 DECLARE_DELEGATE(FOnSkillConfirmed)
 
+UENUM(BlueprintType)
+enum class ETeamID : uint8
+{
+	Neutral,
+	Player,
+	Enemy
+};
+
 USTRUCT(BlueprintType)
 struct FPendingAbilityBinding
 {
@@ -87,6 +95,16 @@ public:
 	
 #pragma endregion PlayerController
 	
+#pragma region Team
+public:
+	ETeamID GetTeamID() const { return TeamID; }
+	
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Team")
+	ETeamID TeamID = ETeamID::Neutral;
+	
+#pragma endregion Team
+	
 #pragma region Input
 public:
 	/** Called for movement input */
@@ -138,7 +156,7 @@ public:
 	void OnMainUICreatedEvent();
 	
 	UFUNCTION(BlueprintImplementableEvent, Category = "UI")
-	void InitSkillIcon(FGameplayAbilityInfo AbilityInfo);
+	void InitSkillIcon(int32 AbilityIndex, float CD, UMaterialInstance* MI);
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI")
 	bool bHasMainUICreated = false;
@@ -148,6 +166,9 @@ public:
 public:	
 	UGAS0AbilitySystemComponent* GetAbilitySystemComponent() const { return AbilitySystemComponent; }
 	UArrowComponent* GetLaserPoint() const { return LaserPoint; }
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void StartCD(int32 InAbilityIndex);
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Components")
     UArrowComponent* LaserPoint = nullptr;

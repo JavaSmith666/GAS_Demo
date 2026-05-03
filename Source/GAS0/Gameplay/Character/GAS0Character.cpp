@@ -80,7 +80,7 @@ void AGAS0Character::BeginPlay()
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetMPAttribute()).AddUObject(this, &AGAS0Character::OnMPAttributeChanged);
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetStrengthAttribute()).AddUObject(this, &AGAS0Character::OnStrengthAttributeChanged);
 		
-		if (GAS0CharacterGlobalConfig && GAS0CharacterGlobalConfig->HealthRegenInfiniteEffect)
+		if (GAS0CharacterGlobalConfig && GAS0CharacterGlobalConfig->HealthRegenInfiniteEffect && TeamID != ETeamID::Enemy)
 		{
 			FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(GAS0CharacterGlobalConfig->HealthRegenInfiniteEffect, 1.f, AbilitySystemComponent->MakeEffectContext());
 			HealthRegenInfiniteEffectSpecHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
@@ -158,7 +158,7 @@ void AGAS0Character::OnDashDamageSphereOverlap(UPrimitiveComponent* OverlappedCo
 		
 		if (GetNetMode() < NM_Client)
 		{
-			MultiPlayMontage(GAS0CharacterGlobalConfig->StunMontage);
+			OtherCharacter->MultiPlayMontage(GAS0CharacterGlobalConfig->StunMontage);
 			if (UGAS0AbilitySystemComponent* OtherASC = OtherCharacter->GetAbilitySystemComponent())
 			{
 				FGameplayEffectSpecHandle SpecHandle = OtherASC->MakeOutgoingSpec(GAS0CharacterGlobalConfig->DashDamageEffect, 1.f, OtherASC->MakeEffectContext());
@@ -483,6 +483,7 @@ void AGAS0Character::PushAway(const FVector& Dir, float Strength, float DelayTim
 	SetFrictionZero();
 	if (UCharacterMovementComponent* TempCharacterMovement = GetCharacterMovement())
 	{
+		TempCharacterMovement->StopMovementImmediately();
 		TempCharacterMovement->AddImpulse(Dir.GetSafeNormal() * Strength, true);
 		GetWorld()->GetTimerManager().SetTimer(PushAwayTimerHandle, FTimerDelegate::CreateUObject(this, &AGAS0Character::OnPushAwayDelayTimeReached), DelayTime, false);
 	}

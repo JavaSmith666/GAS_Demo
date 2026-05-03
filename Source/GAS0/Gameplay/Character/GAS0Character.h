@@ -7,7 +7,6 @@
 #include "Logging/LogMacros.h"
 #include "GameplayEffectTypes.h"
 #include "Gameplay/Abilities/DataTables/CharacterSkillSlotsRow.h"
-#include "Gameplay/Core/GAS0PlayerController.h"
 #include "GAS0Character.generated.h"
 
 class USpringArmComponent;
@@ -94,7 +93,7 @@ public:
 	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Collision")
-	USphereComponent* DashDamageSphere;
+	USphereComponent* DashDamageSphere = nullptr;
 	
 	UPROPERTY(Transient)
 	TArray<AActor*> DashOverlapActors;

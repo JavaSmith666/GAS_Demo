@@ -6,6 +6,7 @@
 
 class UGameplayEffect;
 class UAnimMontage;
+class UInputMappingContext;
 
 UCLASS(BlueprintType)
 class UGAS0CharacterGlobalConfig : public UDataAsset

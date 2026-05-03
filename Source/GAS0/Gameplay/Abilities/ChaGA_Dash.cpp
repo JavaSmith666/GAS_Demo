@@ -2,6 +2,8 @@
 
 #include "Gameplay/Abilities/ChaGA_Dash.h"
 
+#include "Components/CapsuleComponent.h"
+#include "Components/SphereComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Gameplay/Character/GAS0Character.h"
 
@@ -9,7 +11,26 @@ bool UChaGA_Dash::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbility
                                                           const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
                                                           const FGameplayEventData* TriggerEventData)
 {
-	bool res = Super::OnGAS0CharacterGameplayAbilityActivated(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+	if (!OwnerCharacter)
+	{
+		return false;
+	}
+	
+	if (USphereComponent* DashDamageSphere = OwnerCharacter->GetDashDamageSphere())
+	{
+		DashDamageSphere->SetCollisionResponseToChannel(ECC_Pawn, ECollisionResponse::ECR_Overlap);
+	}
+	
+	if (UCapsuleComponent* CapsuleComponent = OwnerCharacter->GetCapsuleComponent())
+	{
+		CapsuleComponent->SetCollisionResponseToChannel(ECC_Pawn, ECollisionResponse::ECR_Overlap);
+	}
+
+	if (const bool bRes = Super::OnGAS0CharacterGameplayAbilityActivated(Handle, ActorInfo, ActivationInfo, TriggerEventData); !bRes)
+	{
+		return false;
+	}
+	
 	if (OwnerCharacter)
 	{
 		OwnerCharacter->SetFrictionZero();
@@ -23,7 +44,7 @@ bool UChaGA_Dash::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbility
 		}
 	}
 	
-	return res;
+	return true;
 }
 
 void UChaGA_Dash::PreGAS0CharacterGameplayAbilityEnded(const FGameplayAbilitySpecHandle Handle,
@@ -33,6 +54,16 @@ void UChaGA_Dash::PreGAS0CharacterGameplayAbilityEnded(const FGameplayAbilitySpe
 	if (OwnerCharacter)
 	{
 		OwnerCharacter->ResetFriction();
+		OwnerCharacter->ResetDashOverlapActorsArray();
+		if (USphereComponent* DashDamageSphere = OwnerCharacter->GetDashDamageSphere())
+		{
+			DashDamageSphere->SetCollisionResponseToChannel(ECC_Pawn, ECollisionResponse::ECR_Ignore);
+		}
+	
+		if (UCapsuleComponent* CapsuleComponent = OwnerCharacter->GetCapsuleComponent())
+		{
+			CapsuleComponent->SetCollisionResponseToChannel(ECC_Pawn, ECollisionResponse::ECR_Block);
+		}
 	}
 	
 	Super::PreGAS0CharacterGameplayAbilityEnded(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);

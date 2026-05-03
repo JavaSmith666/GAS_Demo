@@ -37,18 +37,15 @@ void ALaserActor::Tick(float DeltaTime)
 		const FVector ForwardDir = OwnerCharacter->GetActorForwardVector();
 		const FVector EndLocation = StartLocation + ForwardDir * LaserTraceMaxDistance;
 		
-		FHitResult HitResult;
-		TArray<AActor*> ActorsToIgnore;
-		ActorsToIgnore.Add(this);
-		ActorsToIgnore.Add(OwnerCharacter);
-		
+		FHitResult HitResult;		
 		FCollisionQueryParams QueryParams;
+		QueryParams.AddIgnoredActor(this);
 		QueryParams.AddIgnoredActor(OwnerCharacter);
-		
-		bool bHit = GetWorld()->LineTraceSingleByObjectType(HitResult, StartLocation, EndLocation, ECC_Pawn, QueryParams);
-		if (bHit && HitResult.GetActor())
+
+		if (bool bHit = GetWorld()->LineTraceSingleByObjectType(HitResult, StartLocation, EndLocation, ECC_Pawn, QueryParams))
 		{
-			if (AGAS0Character* HitCharacter = Cast<AGAS0Character>(HitResult.GetActor()))
+			AActor* HitActor = HitResult.GetActor();
+			if (AGAS0Character* HitCharacter = Cast<AGAS0Character>(HitActor))
 			{
 				if (!HitCharacter->IsDead() && HitCharacter != CurrentHitCharacter && HitCharacter->GetTeamID() != OwnerCharacter->GetTeamID())
 				{
@@ -56,10 +53,10 @@ void ALaserActor::Tick(float DeltaTime)
 					CurrentHitCharacter = HitCharacter;
 					if (UAbilitySystemComponent* HitCharacterASC = HitCharacter->GetAbilitySystemComponent())
 					{
-						HitCharacterASC->AddLooseGameplayTag(LaserDamageOnGoingTag);
 						UClass* GEClass = LaserDamageEffect.IsNull() ? nullptr : LaserDamageEffect.LoadSynchronous();
 						const UGameplayEffect* TempGE = GEClass ? GEClass->GetDefaultObject<UGameplayEffect>() : nullptr;
-						HitCharacterASC->ApplyGameplayEffectToSelf(TempGE, 1.f, HitCharacterASC->MakeEffectContext());
+						FGameplayEffectSpecHandle SpecHandle = HitCharacterASC->MakeOutgoingSpec(TempGE->GetClass(), 1.f, HitCharacterASC->MakeEffectContext());
+						CurrentHitCharacterDamageEffectHandle = HitCharacterASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 					}
 				}
 				
@@ -79,7 +76,7 @@ void ALaserActor::ClearCurrentHitCharacterDamageEffect()
 	{
 		if (UAbilitySystemComponent* CurrentASC = CurrentHitCharacter->GetAbilitySystemComponent())
 		{
-			CurrentASC->RemoveLooseGameplayTag(LaserDamageOnGoingTag);
+			CurrentASC->RemoveActiveGameplayEffect(CurrentHitCharacterDamageEffectHandle);
 		}
 	}
 	

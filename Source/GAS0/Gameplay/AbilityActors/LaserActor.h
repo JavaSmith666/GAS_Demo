@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "ActiveGameplayEffectHandle.h"
 #include "GameplayTagContainer.h"
 #include "SummonItemBase.h"
 #include "GameFramework/Actor.h"
@@ -36,9 +37,6 @@ public:
 	UPROPERTY(EditAnywhere)
 	TSoftClassPtr<UGameplayEffect> LaserDamageEffect;
 	
-	UPROPERTY(EditAnywhere)
-	FGameplayTag LaserDamageOnGoingTag;
-	
 	UPROPERTY(Transient)
 	AGAS0Character* CurrentHitCharacter = nullptr;
 	
@@ -54,4 +52,6 @@ protected:
 	
 	UFUNCTION()
 	void OnRep_LaserActive();
+	
+	FActiveGameplayEffectHandle CurrentHitCharacterDamageEffectHandle;
 };

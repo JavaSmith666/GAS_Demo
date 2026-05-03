@@ -18,10 +18,11 @@ class UGAS0AbilitySystemComponent;
 class UGameplayAbility;
 class UArrowComponent;
 class UGAS0CharacterGlobalConfig;
+class USphereComponent;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHPChangeEvent, float, NewHP);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMPChangeEvent, float, NewMP);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnStrengthChangeEvent, float, NewStrength);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnHPChangeEvent, float);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnMPChangeEvent, float);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnStrengthChangeEvent, float);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMainUICreated);
 DECLARE_DELEGATE(FOnSkillConfirmed)
 
@@ -67,7 +68,12 @@ public:
 	/** Actor lifecycle */
 	virtual void BeginPlay() override;
 	
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	
 	UGAS0CharacterGlobalConfig* GetGAS0CharacterGlobalConfig() const { return GAS0CharacterGlobalConfig; }
+	
+	UFUNCTION(NetMulticast, UnReliable)
+	void MultiPlayMontage(UAnimMontage* MontageToPlay);
 	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -79,6 +85,23 @@ protected:
 private:
 	void InitializeCharacterGlobalConfig();
 #pragma endregion Base
+	
+#pragma region Dash
+public:
+	void ResetDashOverlapActorsArray() { DashOverlapActors.Empty(); }
+	
+	USphereComponent* GetDashDamageSphere() const { return DashDamageSphere; }
+	
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Collision")
+	USphereComponent* DashDamageSphere;
+	
+	UPROPERTY(Transient)
+	TArray<AActor*> DashOverlapActors;
+	
+	UFUNCTION()
+	void OnDashDamageSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+#pragma endregion Dash
 	
 #pragma region State
 public:
@@ -235,22 +258,34 @@ private:
 	
 #pragma region Attributes
 public:
-	UPROPERTY(BlueprintAssignable, Category="Attributes")
 	FOnHPChangeEvent OnHPChange;
-	
-	UPROPERTY(BlueprintAssignable, Category="Attributes")
 	FOnMPChangeEvent OnMPChange;
-	
-	UPROPERTY(BlueprintAssignable, Category="Attributes")
 	FOnStrengthChangeEvent OnStrengthChange;
 	
 	UPROPERTY(BlueprintAssignable, Category="Attributes")
 	FOnMainUICreated OnMainUICreated;
 	
+	UFUNCTION(BlueprintImplementableEvent)
+	void UpdateHPBar();
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void UpdateHPAttributeBar();
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void UpdateMPAttributeBar();
+	
+	UFUNCTION(BlueprintImplementableEvent)
+	void UpdateStrengthAttributeBar();
+	
+	UFUNCTION(BlueprintCallable, Category="Attributes")
+	void CheckDeath(float InCurrentHP);
+	
 private:
 	void OnHPAttributeChanged(const FOnAttributeChangeData& Data);
 	void OnMPAttributeChanged(const FOnAttributeChangeData& Data);
 	void OnStrengthAttributeChanged(const FOnAttributeChangeData& Data);
+	
+	FActiveGameplayEffectHandle HealthRegenInfiniteEffectSpecHandle;
 #pragma endregion Attributes
 	
 #pragma region Movement

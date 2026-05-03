@@ -13,7 +13,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
-#include "GAS0.h"
+#include "GAS0AICharacter.h"
 #include "Gameplay/Abilities/GAS0AbilitySystemComponent.h"
 #include "GameplayAbilitySpec.h"
 #include "Gameplay/Abilities/GAS0CharacterGameplayAbility.h"
@@ -24,24 +24,19 @@
 #include "Gameplay/Abilities/DataAssets/SkillConfig.h"
 #include "Gameplay/AttributeSet/BaseAttributeSet.h"
 #include "Components/ArrowComponent.h"
+#include "Components/SphereComponent.h"
 
 
 AGAS0Character::AGAS0Character()
 {
-	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		
-	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
-	// Configure character movement
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
-
-	// Note: For faster iteration times these variables, and many more, can be tweaked in the Character Blueprint
-	// instead of recompiling to adjust them
 	GetCharacterMovement()->JumpZVelocity = 500.f;
 	GetCharacterMovement()->AirControl = 0.35f;
 	GetCharacterMovement()->MaxWalkSpeed = 500.f;
@@ -49,26 +44,69 @@ AGAS0Character::AGAS0Character()
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 
-	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 400.0f;
 	CameraBoom->bUsePawnControlRotation = true;
 	
-	// Create LaserPoint component
-	LaserPoint = CreateDefaultSubobject<UArrowComponent>(TEXT("LaserPoint"));
-	LaserPoint->SetupAttachment(RootComponent);
+	if (!IsA<AGAS0AICharacter>())
+	{
+		LaserPoint = CreateDefaultSubobject<UArrowComponent>(TEXT("LaserPoint"));
+		LaserPoint->SetupAttachment(RootComponent);
+		
+		DashDamageSphere = CreateDefaultSubobject<USphereComponent>(TEXT("DashDamageSphere"));
+		DashDamageSphere->SetupAttachment(RootComponent);
+	}
 
-	// Create a follow camera
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
-	// Ability System Component
 	AbilitySystemComponent = CreateDefaultSubobject<UGAS0AbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 }
 
-// (constructor defaults set above)
+void AGAS0Character::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	InitializeCharacterGlobalConfig();
+
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+		InitializeSkillDataFromDataTable();
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetHPAttribute()).AddUObject(this, &AGAS0Character::OnHPAttributeChanged);
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetMPAttribute()).AddUObject(this, &AGAS0Character::OnMPAttributeChanged);
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetStrengthAttribute()).AddUObject(this, &AGAS0Character::OnStrengthAttributeChanged);
+		
+		if (GAS0CharacterGlobalConfig && GAS0CharacterGlobalConfig->HealthRegenInfiniteEffect)
+		{
+			FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(GAS0CharacterGlobalConfig->HealthRegenInfiniteEffect, 1.f, AbilitySystemComponent->MakeEffectContext());
+			HealthRegenInfiniteEffectSpecHandle = AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+		}
+	}
+	
+	if (DashDamageSphere)
+	{
+		DashDamageSphere->OnComponentBeginOverlap.AddDynamic(this, &AGAS0Character::OnDashDamageSphereOverlap);
+	}
+}
+
+void AGAS0Character::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+	
+	if (AbilitySystemComponent)
+	{
+		AbilitySystemComponent->RemoveActiveGameplayEffect(HealthRegenInfiniteEffectSpecHandle);
+	}
+	
+	if (DashDamageSphere)
+	{
+		DashDamageSphere->OnComponentBeginOverlap.RemoveDynamic(this, &AGAS0Character::OnDashDamageSphereOverlap);
+	}
+}
 
 void AGAS0Character::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -90,10 +128,6 @@ void AGAS0Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		TryBindPendingSkills();
 		BindOtherActions();
 	}
-	else
-	{
-		UE_LOG(LogGAS0, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
-	}
 }
 
 void AGAS0Character::InitializeCharacterGlobalConfig()
@@ -103,6 +137,42 @@ void AGAS0Character::InitializeCharacterGlobalConfig()
 	{
 		UGAS0CharacterGlobalConfig* CharacterGlobalConfig = Settings->CharacterGlobalConfig.LoadSynchronous();
 		GAS0CharacterGlobalConfig = CharacterGlobalConfig;
+	}
+}
+
+void AGAS0Character::OnDashDamageSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (OtherActor == this || DashOverlapActors.Contains(OtherActor) || !GAS0CharacterGlobalConfig)
+	{
+		return;
+	}
+	
+	DashOverlapActors.Add(OtherActor);
+	if (AGAS0Character* OtherCharacter = Cast<AGAS0Character>(OtherActor))
+	{
+		if (TeamID == OtherCharacter->GetTeamID())
+		{
+			return;
+		}
+		
+		if (GetNetMode() < NM_Client)
+		{
+			MultiPlayMontage(GAS0CharacterGlobalConfig->StunMontage);
+			if (UGAS0AbilitySystemComponent* OtherASC = OtherCharacter->GetAbilitySystemComponent())
+			{
+				FGameplayEffectSpecHandle SpecHandle = OtherASC->MakeOutgoingSpec(GAS0CharacterGlobalConfig->DashDamageEffect, 1.f, OtherASC->MakeEffectContext());
+				OtherASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+				
+				FVector Direction = (OtherCharacter->GetActorLocation() - GetActorLocation()).GetSafeNormal();
+				OtherCharacter->PushAway(Direction, GAS0CharacterGlobalConfig->DashImpulse, 1.f);
+			}
+		}
+		
+		if (OtherCharacter->IsLocallyControlled() && OtherCharacter->GetTeamID() != ETeamID::Enemy)
+		{
+			OtherCharacter->Stun(1.f);
+		}
 	}
 }
 
@@ -183,20 +253,22 @@ void AGAS0Character::OnMainUICreatedEvent()
 	OnMainUICreated.Broadcast();
 }
 
-void AGAS0Character::BeginPlay()
+void AGAS0Character::MultiPlayMontage_Implementation(UAnimMontage* MontageToPlay)
 {
-	Super::BeginPlay();
-
-	if (AbilitySystemComponent)
+	if (!MontageToPlay)
 	{
-		AbilitySystemComponent->InitAbilityActorInfo(this, this);
-		InitializeSkillDataFromDataTable();
-		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetHPAttribute()).AddUObject(this, &AGAS0Character::OnHPAttributeChanged);
-		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetMPAttribute()).AddUObject(this, &AGAS0Character::OnMPAttributeChanged);
-		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetStrengthAttribute()).AddUObject(this, &AGAS0Character::OnStrengthAttributeChanged);
+		return;
 	}
 	
-	InitializeCharacterGlobalConfig();
+	if (IsLocallyControlled() && TeamID != ETeamID::Enemy)
+	{
+		return;
+	}
+	
+	if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+	{
+		AnimInstance->Montage_Play(MontageToPlay);
+	}
 }
 
 void AGAS0Character::OnSkillConfigsLoaded()
@@ -330,19 +402,63 @@ void AGAS0Character::OnConfirmSkillActionBound()
 	OnSkillConfirmed.ExecuteIfBound();
 }
 
+void AGAS0Character::CheckDeath(float InCurrentHP)
+{
+	if (!bIsDead && InCurrentHP <= 0.f && GAS0CharacterGlobalConfig)
+	{
+		bIsDead = true;
+		
+		if (GetNetMode() != NM_DedicatedServer)
+		{
+			// 本地预测播放蒙太奇
+			if (UAnimInstance* AnimInst = GetMesh()->GetAnimInstance())
+			{
+				AnimInst->Montage_Play(GAS0CharacterGlobalConfig->DeathMontage);
+			}
+		}
+		else
+		{
+			// 多播RPC让模拟端播蒙太奇
+			MultiPlayMontage(GAS0CharacterGlobalConfig->DeathMontage);	
+		}
+		
+		if (IsLocallyControlled())
+		{
+			if (APlayerController* PC = GetPlayerController())
+			{
+				PC->DisableInput(PC);
+			}
+		}
+	}
+}
+
 void AGAS0Character::OnHPAttributeChanged(const FOnAttributeChangeData& Data)
 {
 	OnHPChange.Broadcast(Data.NewValue);
+	CheckDeath(Data.NewValue);
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		UpdateHPBar();
+		UpdateHPAttributeBar();
+	}
 }
 
 void AGAS0Character::OnMPAttributeChanged(const FOnAttributeChangeData& Data)
 {
 	OnMPChange.Broadcast(Data.NewValue);
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		UpdateMPAttributeBar();
+	}
 }
 
 void AGAS0Character::OnStrengthAttributeChanged(const FOnAttributeChangeData& Data)
 {
 	OnStrengthChange.Broadcast(Data.NewValue);
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		UpdateStrengthAttributeBar();
+	}
 }
 
 void AGAS0Character::SetFrictionZero()

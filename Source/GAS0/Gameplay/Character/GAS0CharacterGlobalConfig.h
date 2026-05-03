@@ -5,6 +5,7 @@
 #include "GAS0CharacterGlobalConfig.generated.h"
 
 class UGameplayEffect;
+class UAnimMontage;
 
 UCLASS(BlueprintType)
 class UGAS0CharacterGlobalConfig : public UDataAsset
@@ -26,4 +27,19 @@ public:
 	
 	UPROPERTY(EditAnywhere, Category="Camera")
 	FRotator LockCameraRelativeRotation;
+	
+	UPROPERTY(EditAnywhere, Category="Montage")
+	TObjectPtr<UAnimMontage> DeathMontage;
+	
+	UPROPERTY(EditAnywhere, Category="Montage")
+	TObjectPtr<UAnimMontage> StunMontage;
+	
+	UPROPERTY(EditAnywhere, Category="Effect")
+	TSubclassOf<UGameplayEffect> HealthRegenInfiniteEffect;
+	
+	UPROPERTY(EditAnywhere, Category="Effect")
+	TSubclassOf<UGameplayEffect> DashDamageEffect;
+	
+	UPROPERTY(EditAnywhere, Category="Impulse")
+	float DashImpulse = 1500.f;
 };

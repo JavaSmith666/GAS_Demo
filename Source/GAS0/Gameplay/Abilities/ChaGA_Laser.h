@@ -35,4 +35,6 @@ protected:
 	
 	UPROPERTY(Transient)
 	ALaserActor* SpawnedLaserActor = nullptr;
+	
+	void OnMPAttributeChanged(const FOnAttributeChangeData& Data);
 };

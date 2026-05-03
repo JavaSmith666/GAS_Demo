@@ -3,6 +3,8 @@
 #include "Gameplay/Abilities/ChaGA_Laser.h"
 #include "GAS0AbilitySystemComponent.h"
 #include "Components/ArrowComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/SphereComponent.h"
 #include "Gameplay/Character/GAS0Character.h"
 #include "Gameplay/AbilityActors///LaserActor.h"
 #include "Gameplay/AbilityActors/SummonItemBase.h"
@@ -56,6 +58,7 @@ bool UChaGA_Laser::OnGAS0CharacterGameplayAbilityActivated(const FGameplayAbilit
 	if (UGAS0AbilitySystemComponent* ASC = OwnerCharacter->GetAbilitySystemComponent())
 	{
 		ASC->AddLooseGameplayTag(LaserConfig->LaserCostTag);
+		ASC->GetGameplayAttributeValueChangeDelegate(UBaseAttributeSet::GetMPAttribute()).AddUObject(this, &UChaGA_Laser::OnMPAttributeChanged);
 	}
 	
 	if (OwnerCharacter->GetNetMode() < NM_Client)
@@ -108,4 +111,15 @@ void UChaGA_Laser::PreGAS0CharacterGameplayAbilityEnded(const FGameplayAbilitySp
 	}
 	
 	Super::PreGAS0CharacterGameplayAbilityEnded(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void UChaGA_Laser::OnMPAttributeChanged(const FOnAttributeChangeData& Data)
+{
+	if (Data.NewValue <= 0.f)
+	{
+		if (OwnerCharacter && OwnerCharacter->GetNetMode() < NM_Client)
+		{
+			EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+		}
+	}
 }
